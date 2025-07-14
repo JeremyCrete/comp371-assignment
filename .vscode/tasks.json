@@ -9,7 +9,11 @@
                 "-g",
                 "${file}",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "-I",
+                "${workspaceFolder}\\dependencies\\GLEW\\include",
+                "${workspaceFolder}\\dependencies\\GLFW\\include",
+                
             ],
             "options": {
                 "cwd": "${fileDirname}"
