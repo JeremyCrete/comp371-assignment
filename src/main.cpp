@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
 #include <GL/glew.h>  // Include GLEW - OpenGL Extension Wrangler
 
@@ -13,12 +15,11 @@
 #include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
 #include <glm/gtc/matrix_transform.hpp> // include this to create transformation matrices
 
-#include "stb_image.h"
-
 static const int WIDTH = 800;  // Window width
 static const int HEIGHT = 600; // Window height
 
 const char *getVertexShaderSource()
+
 {
     // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
     return "#version 330 core\n"
@@ -118,6 +119,7 @@ int compileAndLinkShaders()
     }
 
     glDeleteShader(vertexShader);
+
     glDeleteShader(fragmentShader);
 
     return shaderProgram;
@@ -169,6 +171,10 @@ void processInput(GLFWwindow *window)
 
 int main(int argc, char *argv[])
 {
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
     // Initialize GLFW and OpenGL version
     glfwInit();
 
