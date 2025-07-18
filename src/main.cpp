@@ -13,6 +13,8 @@
 #include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
 #include <glm/gtc/matrix_transform.hpp> // include this to create transformation matrices
 
+#include "stb_image.h"
+
 static const int WIDTH = 800;  // Window width
 static const int HEIGHT = 600; // Window height
 
@@ -165,8 +167,6 @@ void processInput(GLFWwindow *window)
         glfwSetWindowShouldClose(window, true);
 }
 
-
-
 int main(int argc, char *argv[])
 {
     // Initialize GLFW and OpenGL version
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     }
     glfwMakeContextCurrent(window);
 
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); //removes the mouse cursor from the window
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // removes the mouse cursor from the window
 
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -222,8 +222,6 @@ int main(int argc, char *argv[])
 
     double lastMousePosX, lastMousePosY;
 
-
-
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
@@ -233,7 +231,6 @@ int main(int argc, char *argv[])
         float dt = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
 
-    
         double mousePosX, mousePosY;
         glfwGetCursorPos(window, &mousePosX, &mousePosY);
 
@@ -244,13 +241,12 @@ int main(int argc, char *argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-
         // Update camera horizontal and vertical angle and added a constant speed for camera rotation
         const float cameraAngularSpeed = 8.0f;
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
-        //clamp vertical angle to avod flipping of the cam
+        // clamp vertical angle to avod flipping of the cam
         cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
 
         float phi = glm::radians(cameraVerticalAngle);
@@ -265,7 +261,6 @@ int main(int argc, char *argv[])
         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
 
-
         processInput(window);
 
         // Each frame, reset color of each pixel to glClearColor
@@ -274,8 +269,7 @@ int main(int argc, char *argv[])
         // Draw geometry
         glUseProgram(shaderProgram);
 
-
-        glm::mat4 projectionMatrix = glm::perspective (glm:: radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
 
         GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
         glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
@@ -283,7 +277,6 @@ int main(int argc, char *argv[])
         // Draw Rectangle
         glBindVertexArray(squareAO);
 
-        
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
