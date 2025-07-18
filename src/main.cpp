@@ -1,11 +1,5 @@
-//
-// COMP 371 Labs Framework
-//
-// Created by Nicolas Bergeron on 20/06/2019.
-//
-// Inspired by the following tutorials:
-// - https://learnopengl.com/Getting-started/Hello-Window
-// - https://learnopengl.com/Getting-started/Hello-Triangle
+// This file is part of the Comp371 Assignment 1
+// It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering
 
 #include <iostream>
 
@@ -17,6 +11,9 @@
 
 #include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
 #include <glm/gtc/matrix_transform.hpp> // include this to create transformation matrices
+
+static const int WIDTH = 800;  // Window width
+static const int HEIGHT = 600; // Window height
 
 const char *getVertexShaderSource()
 {
@@ -42,15 +39,6 @@ const char *getFragmentShaderSource()
            "   FragColor = vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
            "}";
 }
-
-glm::vec3 triangleArray[] = {
-    glm::vec3(0.0f, 0.5f, 0.03f),   // top center position
-    glm::vec3(1.0f, 0.0f, 0.0f),    // top center color (red)
-    glm::vec3(0.5f, -0.5f, 0.03f),  // bottom right
-    glm::vec3(0.0f, 1.0f, 0.0f),    // bottom right color (green)
-    glm::vec3(-0.5f, -0.5f, 0.03f), // bottom left
-    glm::vec3(0.0f, 0.0f, 1.0f),    // bottom left color (blue)
-};
 
 glm::vec3 squareArray[] = {
     // First Triangle
@@ -166,6 +154,13 @@ int createVertexArrayObject(const glm::vec3 *vertexArray, int arraySize)
     return vertexArrayObject;
 }
 
+void processInput(GLFWwindow *window)
+{
+    // If the user presses ESC, close the window
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+
 int main(int argc, char *argv[])
 {
     // Initialize GLFW and OpenGL version
@@ -178,7 +173,7 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow *window = glfwCreateWindow(800, 600, "Comp371 - Lab 02", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 1", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -203,7 +198,6 @@ int main(int argc, char *argv[])
     int shaderProgram = compileAndLinkShaders();
 
     // Define and upload geometry to the GPU here ...
-    int triangleAO = createVertexArrayObject(triangleArray, sizeof(triangleArray));
     int squareAO = createVertexArrayObject(squareArray, sizeof(squareArray));
 
     // Variables to be used later in tutorial
@@ -214,6 +208,8 @@ int main(int argc, char *argv[])
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
+        processInput(window);
+
         // Each frame, reset color of each pixel to glClearColor
         glClear(GL_COLOR_BUFFER_BIT);
 
@@ -227,10 +223,6 @@ int main(int argc, char *argv[])
 
         glfwSwapBuffers(window);
         glfwPollEvents();
-
-        // Handle inputs
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, true);
     }
 
     // Shutdown GLFW
