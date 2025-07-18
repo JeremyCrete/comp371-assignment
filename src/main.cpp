@@ -1,5 +1,6 @@
 // This file is part of the Comp371 Assignment 1
 // It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering
+// Jeremy Crete <40246576>
 
 #include <iostream>
 
@@ -22,10 +23,13 @@ const char *getVertexShaderSource()
            "layout (location = 0) in vec3 aPos;"
            "layout (location = 1) in vec3 aColor;"
            "out vec3 vertexColor;"
+           "uniform mat4 worldMatrix;"
+           "uniform mat4 viewMatrix = mat4(1.0f);"
+           "uniform mat4 projectionMatrix = mat4(1.0f);"
            "void main()"
            "{"
            "   vertexColor = aColor;"
-           "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+           "   gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
            "}";
 }
 
@@ -161,6 +165,8 @@ void processInput(GLFWwindow *window)
         glfwSetWindowShouldClose(window, true);
 }
 
+
+
 int main(int argc, char *argv[])
 {
     // Initialize GLFW and OpenGL version
@@ -181,6 +187,8 @@ int main(int argc, char *argv[])
         return -1;
     }
     glfwMakeContextCurrent(window);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); //removes the mouse cursor from the window
 
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -205,9 +213,59 @@ int main(int argc, char *argv[])
     float rotationSpeed = 180.0f; // 180 degrees per second
     float lastFrameTime = glfwGetTime();
 
+    glm::vec3 cameraPosition(0.0f, 0.0f, 2.0f);
+    glm::vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
+
+    float cameraHorizontalAngle = 90.0f;
+    float cameraVerticalAngle = 0.0f;
+
+    double lastMousePosX, lastMousePosY;
+
+
+
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
+
+        // Frame time calculation
+        float currentFrameTime = glfwGetTime();
+        float dt = currentFrameTime - lastFrameTime;
+        lastFrameTime = currentFrameTime;
+
+    
+        double mousePosX, mousePosY;
+        glfwGetCursorPos(window, &mousePosX, &mousePosY);
+
+        // Calculate mouse motion dx and dy
+        double dx = mousePosX - lastMousePosX;
+        double dy = mousePosY - lastMousePosY;
+
+        lastMousePosX = mousePosX;
+        lastMousePosY = mousePosY;
+
+
+        // Update camera horizontal and vertical angle and added a constant speed for camera rotation
+        const float cameraAngularSpeed = 8.0f;
+        cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
+        cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
+
+        //clamp vertical angle to avod flipping of the cam
+        cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
+
+        float phi = glm::radians(cameraVerticalAngle);
+        float theta = glm::radians(cameraHorizontalAngle);
+
+        // Update camera lookAt vector based on angles
+        cameraLookAt = glm::vec3(cosf(phi) * cosf(theta), sinf(phi), -cosf(phi) * sinf(theta));
+
+        // Update camera position based on angles
+        glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
+
+        GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+
+
         processInput(window);
 
         // Each frame, reset color of each pixel to glClearColor
@@ -216,8 +274,19 @@ int main(int argc, char *argv[])
         // Draw geometry
         glUseProgram(shaderProgram);
 
+
+        glm::mat4 projectionMatrix = glm::perspective (glm:: radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
+
+        GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
+        glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+
         // Draw Rectangle
         glBindVertexArray(squareAO);
+
+        
+        GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
+        glm::mat4 worldMatrix = glm::mat4(1.0f);
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
 
