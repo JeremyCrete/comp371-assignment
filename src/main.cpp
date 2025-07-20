@@ -6,7 +6,7 @@
 #include <iostream>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "include/stb_image.h"
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
 #include <GL/glew.h>  // Include GLEW - OpenGL Extension Wrangler
 
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, nrChannels;
-    unsigned char *data = stbi_load("container.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char *data = stbi_load("src/textures/asphalt.jpg", &texWidth, &texHeight, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
