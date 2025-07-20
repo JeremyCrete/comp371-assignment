@@ -53,23 +53,48 @@ const char *getFragmentShaderSource()
            "}";
 }
 
-glm::vec3 squareArray[] = {
-    // First Triangle
-    glm::vec3(-0.5f, -0.5f, 0.0f),
-    glm::vec3(1.0f, 0.0f, 0.0f),
-    glm::vec3(0.5f, 0.5f, 0.0f),
-    glm::vec3(0.0f, 1.0f, 0.0f),
-    glm::vec3(-0.5f, 0.5f, 0.0f),
-    glm::vec3(0.0f, 0.0f, 1.0f),
 
-    // Second Triangle
-    glm::vec3(0.5f, -0.5f, 0.0f),
-    glm::vec3(1.0f, 1.0f, 0.0f),
-    glm::vec3(0.5f, 0.5f, 0.0f),
-    glm::vec3(0.0f, 1.0f, 0.0f),
-    glm::vec3(-0.5f, -0.5f, 0.0f),
-    glm::vec3(1.0f, 0.0f, 0.0f),
+
+struct TexturedColoredVertex
+{
+    TexturedColoredVertex(glm::vec3 _position, glm::vec3 _color, glm::vec2 _uv)
+        : position(_position), color(_color), uv(_uv) {}
+
+    glm::vec3 position;
+    glm::vec3 color;
+    glm::vec2 uv;
 };
+
+
+TexturedColoredVertex texturedSquareArray[] = {
+    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f)),
+    TexturedColoredVertex(glm::vec3( 0.5f, -0.5f, 0.0f), glm::vec3(0, 1, 0), glm::vec2(1.0f, 0.0f)),
+    TexturedColoredVertex(glm::vec3( 0.5f,  0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f)),
+
+    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f)),
+    TexturedColoredVertex(glm::vec3( 0.5f,  0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f)),
+    TexturedColoredVertex(glm::vec3(-0.5f,  0.5f, 0.0f), glm::vec3(1, 1, 0), glm::vec2(0.0f, 1.0f))
+};
+
+
+
+// glm::vec3 squareArray[] = {
+//     // First Triangle
+//     glm::vec3(-0.5f, -0.5f, 0.0f),
+//     glm::vec3(1.0f, 0.0f, 0.0f),
+//     glm::vec3(0.5f, 0.5f, 0.0f),
+//     glm::vec3(0.0f, 1.0f, 0.0f),
+//     glm::vec3(-0.5f, 0.5f, 0.0f),
+//     glm::vec3(0.0f, 0.0f, 1.0f),
+
+//     // Second Triangle
+//     glm::vec3(0.5f, -0.5f, 0.0f),
+//     glm::vec3(1.0f, 1.0f, 0.0f),
+//     glm::vec3(0.5f, 0.5f, 0.0f),
+//     glm::vec3(0.0f, 1.0f, 0.0f),
+//     glm::vec3(-0.5f, -0.5f, 0.0f),
+//     glm::vec3(1.0f, 0.0f, 0.0f),
+// };
 
 int compileAndLinkShaders()
 {
@@ -131,42 +156,34 @@ int compileAndLinkShaders()
     return shaderProgram;
 }
 
-int createVertexArrayObject(const glm::vec3 *vertexArray, int arraySize)
+int createTexturedVertexArrayObject(const TexturedColoredVertex* vertexArray, int arraySize)
 {
-    // Create a vertex array
-    GLuint vertexArrayObject;
-    glGenVertexArrays(1, &vertexArrayObject);
-    glBindVertexArray(vertexArrayObject);
+    GLuint vao, vbo;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
-    // Upload Vertex Buffer to the GPU, keep a reference to it (vertexBufferObject)
-    GLuint vertexBufferObject;
-    glGenBuffers(1, &vertexBufferObject);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, arraySize, vertexArray, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0,                     // attribute 0 matches aPos in Vertex Shader
-                          3,                     // size
-                          GL_FLOAT,              // type
-                          GL_FALSE,              // normalized?
-                          2 * sizeof(glm::vec3), // stride - each vertex contain 2 vec3 (position, color)
-                          (void *)0              // array buffer offset
-    );
+    // Position
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, position));
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, // attribute 1 matches aColor in Vertex Shader
-                          3,
-                          GL_FLOAT,
-                          GL_FALSE,
-                          2 * sizeof(glm::vec3),
-                          (void *)sizeof(glm::vec3) // color is offseted a vec3 (comes after position)
-    );
+    // Color
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, color));
     glEnableVertexAttribArray(1);
+
+    // Texture coordinates
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, uv));
+    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-    return vertexArrayObject;
+    return vao;
 }
+
 
 void processInput(GLFWwindow *window)
 {
@@ -177,6 +194,8 @@ void processInput(GLFWwindow *window)
 
 int main(int argc, char *argv[])
 {
+
+    double lastMousePosX, lastMousePosY;
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -202,6 +221,9 @@ int main(int argc, char *argv[])
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // removes the mouse cursor from the window
 
+    glfwGetCursorPos(window, &lastMousePosX, &lastMousePosY);
+
+
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
     if (glewInit() != GLEW_OK)
@@ -218,7 +240,8 @@ int main(int argc, char *argv[])
     int shaderProgram = compileAndLinkShaders();
 
     // Define and upload geometry to the GPU here ...
-    int squareAO = createVertexArrayObject(squareArray, sizeof(squareArray));
+    int squareAO = createTexturedVertexArrayObject(texturedSquareArray, sizeof(texturedSquareArray));
+
 
     // Variables to be used later in tutorial
     float angle = 0;
@@ -226,13 +249,13 @@ int main(int argc, char *argv[])
     float lastFrameTime = glfwGetTime();
 
     glm::vec3 cameraPosition(0.0f, 0.0f, 2.0f);
-    glm::vec3 cameraLookAt(0.0f, 0.0f, 1.0f);
+    glm::vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
 
-    double lastMousePosX = 0.0f, lastMousePosY = 0.0f;
+   
 
     unsigned int texture;
     glGenTextures(1, &texture);
