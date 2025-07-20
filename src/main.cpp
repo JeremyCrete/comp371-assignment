@@ -1,6 +1,7 @@
 // This file is part of the Comp371 Assignment 1
 // It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering
 // Jeremy Crete <40246576>
+// Colton Leblond <40210640>
 
 #include <iostream>
 
@@ -13,7 +14,7 @@
                         // initializing OpenGL and binding inputs
 
 #include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
-#include <glm/gtc/matrix_transform.hpp> // include this to create transformation matrices
+#include <glm/gtc/matrix_transform.hpp> // GLM provides matrix transformations
 
 static const int WIDTH = 800;  // Window width
 static const int HEIGHT = 600; // Window height
@@ -25,7 +26,9 @@ const char *getVertexShaderSource()
     return "#version 330 core\n"
            "layout (location = 0) in vec3 aPos;"
            "layout (location = 1) in vec3 aColor;"
+           "layout (location = 2) in vec2 aTexCoord;"
            "out vec3 vertexColor;"
+           "out vec2 texCoord;"
            "uniform mat4 worldMatrix;"
            "uniform mat4 viewMatrix = mat4(1.0f);"
            "uniform mat4 projectionMatrix = mat4(1.0f);"
@@ -33,6 +36,7 @@ const char *getVertexShaderSource()
            "{"
            "   vertexColor = aColor;"
            "   gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+           "   texCoord = aTexCoord;"
            "}";
 }
 
@@ -40,10 +44,12 @@ const char *getFragmentShaderSource()
 {
     return "#version 330 core\n"
            "in vec3 vertexColor;"
+           "in vec2 texCoord;"
            "out vec4 FragColor;"
+           "uniform sampler2D texture1;"
            "void main()"
            "{"
-           "   FragColor = vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
+           "   FragColor = texture(texture1, texCoord);"
            "}";
 }
 
@@ -220,13 +226,37 @@ int main(int argc, char *argv[])
     float lastFrameTime = glfwGetTime();
 
     glm::vec3 cameraPosition(0.0f, 0.0f, 2.0f);
-    glm::vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraLookAt(0.0f, 0.0f, 1.0f);
     glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
 
-    double lastMousePosX, lastMousePosY;
+    double lastMousePosX = 0.0f, lastMousePosY = 0.0f;
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int texWidth, texHeight, nrChannels;
+    unsigned char *data = stbi_load("container.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cerr << "Successfully loaded texture" << std::endl;
+    }
+    else
+    {
+        std::cerr << "Failed to load texture" << std::endl;
+    }
+
+    stbi_image_free(data);
 
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
@@ -272,6 +302,9 @@ int main(int argc, char *argv[])
         // Each frame, reset color of each pixel to glClearColor
         glClear(GL_COLOR_BUFFER_BIT);
 
+        // bind Texture
+        glBindTexture(GL_TEXTURE_2D, texture);
+
         // Draw geometry
         glUseProgram(shaderProgram);
 
@@ -297,4 +330,11 @@ int main(int argc, char *argv[])
     glfwTerminate();
 
     return 0;
+}
+
+void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+{
+    // make sure the viewport matches the new window dimensions; note that width and
+    // height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
 }
