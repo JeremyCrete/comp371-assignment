@@ -251,7 +251,8 @@ int main(int argc, char *argv[])
     glEnable(GL_DEPTH_TEST);
 
     // Black background
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
 
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders();
@@ -284,7 +285,7 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, nrChannels;
-    unsigned char *data = stbi_load("Textures/asphalt.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char *data = stbi_load("Textures/ground.jpg", &texWidth, &texHeight, &nrChannels, 0);
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
