@@ -50,7 +50,7 @@ const char *getFragmentShaderSource()
            "uniform sampler2D texture1;"
            "void main()"
            "{"
-           "   FragColor = texture(texture1, texCoord);"
+           "   FragColor = texture(texture1, texCoord * 50);"
            "}";
 }
 
@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
 #endif
     // Initialize GLFW and OpenGL version
     glfwInit();
+    
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
@@ -247,6 +248,7 @@ int main(int argc, char *argv[])
         glfwTerminate();
         return -1;
     }
+    glEnable(GL_DEPTH_TEST);
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -338,7 +340,7 @@ int main(int argc, char *argv[])
         processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
 
         // Each frame, reset color of each pixel to glClearColor
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // bind Texture
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -356,6 +358,9 @@ int main(int argc, char *argv[])
 
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
         glm::mat4 worldMatrix = glm::mat4(1.0f);
+        worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(500.0f, 1.0f, 500.0f));
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
