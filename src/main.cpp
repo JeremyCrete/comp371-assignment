@@ -2,6 +2,7 @@
 // It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering
 // Jeremy Crete <40246576>
 // Colton Leblond <40210640>
+// Charles Eimer <26747310>
 
 #include <iostream>
 
@@ -185,11 +186,25 @@ int createTexturedVertexArrayObject(const TexturedColoredVertex* vertexArray, in
 }
 
 
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const glm::vec3 &cameraLookAt, const glm::vec3 &cameraUp)
 {
-    // If the user presses ESC, close the window
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = 1.5f * dt;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)
+        cameraSpeed *= 3.0f;
+
+    glm::vec3 right = glm::normalize(glm::cross(cameraLookAt, cameraUp));
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPosition += cameraSpeed * cameraLookAt;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPosition -= cameraSpeed * cameraLookAt;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPosition -= right * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPosition += right * cameraSpeed;
 }
 
 int main(int argc, char *argv[])
@@ -320,7 +335,7 @@ int main(int argc, char *argv[])
         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
 
-        processInput(window);
+        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
 
         // Each frame, reset color of each pixel to glClearColor
         glClear(GL_COLOR_BUFFER_BIT);
