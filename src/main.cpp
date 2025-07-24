@@ -22,6 +22,8 @@ static const int HEIGHT = 1000; // Window height
 
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
+glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
 
 const char *getVertexShaderSource()
 
@@ -335,8 +337,8 @@ int compileSkyboxShaders()
     return shaderProgram;
 }
 
-// compiles the shaders fort the example cube
-int compileCubeShaders()
+// compiles the shaders fort the light cube
+int compileLightShaders()
 {
     int vertexShader = glCreateShader(GL_VERTEX_SHADER);
     const char *vertexShaderSource = getLightVertexShaderSource();
@@ -479,15 +481,14 @@ int main(int argc, char *argv[])
 
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders();
-    int lightProgram = compileAndLinkShaders();
+    int lightProgram = compileLightShaders();
+    unsigned int lightVAO = createLightVAO();
 
     int skyboxShaderProgram = compileSkyboxShaders();
     unsigned int skyboxVAO = createSkyboxVAO();
 
     // Define and upload geometry to the GPU here ...
     int squareAO = createTexturedVertexArrayObject(texturedSquareArray, sizeof(texturedSquareArray));
-
-    int lightVAO = createLightVAO();
 
     // Variables to be used later in tutorial
     float angle = 0;
@@ -579,6 +580,12 @@ int main(int argc, char *argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
+        // process input
+        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
+
+        // Each frame, reset color of each pixel to glClearColor
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         // Update camera horizontal and vertical angle and added a constant speed for camera rotation
         const float cameraAngularSpeed = 8.0f;
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
@@ -593,16 +600,10 @@ int main(int argc, char *argv[])
         // Update camera lookAt vector based on angles
         cameraLookAt = glm::vec3(cosf(phi) * cosf(theta), sinf(phi), -cosf(phi) * sinf(theta));
 
-        // Update camera position based on angles
+        // view matrix
         glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
-
         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
-
-        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
-
-        // Each frame, reset color of each pixel to glClearColor
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Draw Skybox
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
@@ -642,10 +643,15 @@ int main(int argc, char *argv[])
         glBindVertexArray(0);
 
         // Draw light cube
+        glUseProgram(lightProgram);
+        glUniform3f(glGetUniformLocation(lightProgram, "objectColor"), 1.0f, 0.5f, 0.31f);
+        glUniform3f(glGetUniformLocation(lightProgram, "lightColor"), 1.0f, 0.5f, 0.31f);
+        glUniform3f(glGetUniformLocation(lightProgram, "lightPos"), 1.0f, 1.0f, 1.0f);
+
         glBindVertexArray(lightVAO);
         GLuint lightWorldMatrixLocation = glGetUniformLocation(lightProgram, "worldMatrix");
         glm::mat4 lightWorldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(lightWorldMatrix, glm::vec3(1.0f, 5.0f, 1.0f));
+        worldMatrix = glm::translate(lightWorldMatrix, lightPos);
         worldMatrix = glm::scale(lightWorldMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
         worldMatrix = glm::rotate(lightWorldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(lightWorldMatrixLocation, 1, GL_FALSE, &lightWorldMatrix[0][0]);
