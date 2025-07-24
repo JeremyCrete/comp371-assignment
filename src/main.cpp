@@ -429,7 +429,7 @@ unsigned int createLightVAO()
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 6, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     return cubeVAO;
 }
 
@@ -479,12 +479,15 @@ int main(int argc, char *argv[])
 
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders();
+    int lightProgram = compileAndLinkShaders();
 
     int skyboxShaderProgram = compileSkyboxShaders();
     unsigned int skyboxVAO = createSkyboxVAO();
 
     // Define and upload geometry to the GPU here ...
     int squareAO = createTexturedVertexArrayObject(texturedSquareArray, sizeof(texturedSquareArray));
+
+    int lightVAO = createLightVAO();
 
     // Variables to be used later in tutorial
     float angle = 0;
@@ -637,6 +640,18 @@ int main(int argc, char *argv[])
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
+
+        // Draw light cube
+        glBindVertexArray(lightVAO);
+        GLuint lightWorldMatrixLocation = glGetUniformLocation(lightProgram, "worldMatrix");
+        glm::mat4 lightWorldMatrix = glm::mat4(1.0f);
+        worldMatrix = glm::translate(lightWorldMatrix, glm::vec3(1.0f, 5.0f, 1.0f));
+        worldMatrix = glm::scale(lightWorldMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
+        worldMatrix = glm::rotate(lightWorldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(lightWorldMatrixLocation, 1, GL_FALSE, &lightWorldMatrix[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36); // 6 vertices, starting at index 0
+        glBindVertexArray(0);
+        glDepthFunc(GL_LEQUAL);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
