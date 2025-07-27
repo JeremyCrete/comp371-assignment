@@ -5,9 +5,12 @@
 // Charles Eimer <26747310>
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "include/stb_image.h"
+#include "stb_image.h"
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
 #include <GL/glew.h>  // Include GLEW - OpenGL Extension Wrangler
 
@@ -21,141 +24,67 @@ static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-glm::vec3 objectColor(1.0f, 0.5f, 0.31f);
-glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+glm::vec3 lightPos(1.2f, 0.0f, 2.0f);
 
-const char *getVertexShaderSource()
-
+std::string loadShaderSource(const std::string &filepath)
 {
-    // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
-    return "#version 330 core\n"
-           "layout (location = 0) in vec3 aPos;"
-           "layout (location = 1) in vec3 aColor;"
-           "layout (location = 2) in vec2 aTexCoord;"
-           "out vec3 vertexColor;"
-           "out vec2 texCoord;"
-           "uniform mat4 worldMatrix;"
-           "uniform mat4 viewMatrix = mat4(1.0f);"
-           "uniform mat4 projectionMatrix = mat4(1.0f);"
-           "void main()"
-           "{"
-           "   vertexColor = aColor;"
-           "   gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-           "   texCoord = aTexCoord;"
-           "}";
+    std::ifstream file(filepath);
+    std::stringstream buffer;
+    if (file.is_open())
+    {
+        buffer << file.rdbuf();
+        file.close();
+    }
+    else
+    {
+        std::cerr << "Failed to open shader file: " << filepath << std::endl;
+    }
+    return buffer.str();
 }
 
-const char *getFragmentShaderSource()
-{
-    return "#version 330 core\n"
-           "in vec3 vertexColor;"
-           "in vec2 texCoord;"
-           "out vec4 FragColor;"
-           "uniform sampler2D texture1;"
-           "void main()"
-           "{"
-           "   FragColor = texture(texture1, texCoord * 50);"
-           "}";
-}
+std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
+const char *vertexShaderSource = vertexShaderStr.c_str();
 
-const char *getSkyBoxVertexShaderSource()
-{
+std::string fragmentShaderStr = loadShaderSource("Shaders/shader.frag");
+const char *fragmentShaderSource = fragmentShaderStr.c_str();
 
-    return "#version 330 core\n"
-           "layout (location = 0) in vec3 aPos;"
-           "out vec3 TexCoords;"
-           "uniform mat4 projectionMatrix;"
-           "uniform mat4 viewMatrix;"
-           "void main()"
-           "{"
-           "   TexCoords = aPos;"
-           "   vec4 pos = projectionMatrix * viewMatrix * vec4(aPos, 1.0);"
-           "   gl_Position = pos.xyww;"
-           "}";
-}
+std::string skyboxVertexShaderStr = loadShaderSource("Shaders/skybox.vert");
+const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
-const char *getSkyBoxFragmentShaderSource()
-{
+std::string skyboxFragmentShaderStr = loadShaderSource("Shaders/skybox.frag");
+const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
-    return "#version 330 core\n"
-           "out vec4 FragColor;"
-           "in vec3 TexCoords;"
-           "uniform samplerCube skybox;"
-           "void main()"
-           "{"
-           "   FragColor = texture(skybox, TexCoords);"
-           "}";
-}
+std::string vertexShader2Str = loadShaderSource("Shaders/shader2.vert");
+const char *vertexShader2Source = vertexShader2Str.c_str();
 
-const char *getLightVertexShaderSource()
-{
-    return "#version 330 core"
-           "layout(location = 0) in vec3 aPos;"
-           "layout(location = 1) in vec3 aNormal;"
-           "out vec3 FragPos;"
-           "out vec3 Normal;"
-           "uniform mat4 model;"
-           "uniform mat4 view;"
-           "uniform mat4 projection;"
-           "void main()"
-           "{"
-           "FragPos = vec3(model * vec4(aPos, 1.0));"
-           "Normal = mat3(transpose(inverse(model))) * aNormal;"
-           "gl_Position = projection * view * vec4(FragPos, 1.0);"
-           "}";
-}
-
-const char *getLightFragmentShaderSource()
-{
-    return "#version 330 core"
-           "out vec4 FragColor;"
-
-           "in vec3 Normal;"
-           "in vec3 FragPos;"
-
-           "uniform vec3 lightPos;"
-           "uniform vec3 viewPos;"
-           "uniform vec3 lightColor;"
-           "uniform vec3 objectColor;"
-
-           "void main()"
-           "{"
-           "float ambientStrength = 0.1;"
-           "vec3 ambient = ambientStrength * lightColor;"
-
-           "vec3 norm = normalize(Normal);"
-           "vec3 lightDir = normalize(lightPos - FragPos);"
-           "float diff = max(dot(norm, lightDir), 0.0);"
-           "vec3 diffuse = diff * lightColor;"
-           "float specularStrength = 0.5;"
-           "vec3 viewDir = normalize(viewPos - FragPos);"
-           "vec3 reflectDir = reflect(-lightDir, norm);"
-           "float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);"
-           "vec3 specular = specularStrength * spec * lightColor;"
-           "vec3 result = (ambient + diffuse + specular) * objectColor;"
-           "FragColor = vec4(result, 1.0);"
-           "}";
-}
+std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
+const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
 
 struct TexturedColoredVertex
 {
-    TexturedColoredVertex(glm::vec3 _position, glm::vec3 _color, glm::vec2 _uv)
-        : position(_position), color(_color), uv(_uv) {}
+    TexturedColoredVertex(glm::vec3 _position, glm::vec3 _color, glm::vec2 _uv, glm::vec3 _normal)
+        : position(_position), color(_color), uv(_uv), normal(_normal)
+    {
+    }
 
     glm::vec3 position;
     glm::vec3 color;
     glm::vec2 uv;
+    glm::vec3 normal;
 };
 
 TexturedColoredVertex texturedSquareArray[] = {
-    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f)),
-    TexturedColoredVertex(glm::vec3(0.5f, -0.5f, 0.0f), glm::vec3(0, 1, 0), glm::vec2(1.0f, 0.0f)),
-    TexturedColoredVertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f)),
+    // First triangle
+    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
+    TexturedColoredVertex(glm::vec3(0.5f, -0.5f, 0.0f), glm::vec3(0, 1, 0), glm::vec2(1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
+    TexturedColoredVertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
 
-    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f)),
-    TexturedColoredVertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f)),
-    TexturedColoredVertex(glm::vec3(-0.5f, 0.5f, 0.0f), glm::vec3(1, 1, 0), glm::vec2(0.0f, 1.0f))};
+    // Second triangle
+    TexturedColoredVertex(glm::vec3(-0.5f, -0.5f, 0.0f), glm::vec3(1, 0, 0), glm::vec2(0.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
+    TexturedColoredVertex(glm::vec3(0.5f, 0.5f, 0.0f), glm::vec3(0, 0, 1), glm::vec2(1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
+    TexturedColoredVertex(glm::vec3(-0.5f, 0.5f, 0.0f), glm::vec3(1, 1, 0), glm::vec2(0.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f)),
+
+};
 
 float skyboxVertices[] = {
     // positions
@@ -201,49 +130,6 @@ float skyboxVertices[] = {
     -1.0f, -1.0f, 1.0f,
     1.0f, -1.0f, 1.0f};
 
-float cubeVertices[] = {
-    -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-    0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-    0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-    0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-    -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-    -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f,
-
-    -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-    -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-
-    -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f,
-
-    0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
-    0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f,
-
-    -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f};
-
 std::vector<std::string> facesCubemap = {
     "Textures/skybox/px.png", // right
     "Textures/skybox/nx.png", // left
@@ -253,7 +139,7 @@ std::vector<std::string> facesCubemap = {
     "Textures/skybox/nz.png"  // back
 };
 
-int compileAndLinkShaders()
+int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
 {
     // compile and link shader program
     // return shader program id
@@ -261,8 +147,8 @@ int compileAndLinkShaders()
 
     // vertex shader
     int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    const char *vertexShaderSource = getVertexShaderSource();
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+
+    glShaderSource(vertexShader, 1, &vertexSource, NULL);
     glCompileShader(vertexShader);
 
     // check for shader compile errors
@@ -278,8 +164,8 @@ int compileAndLinkShaders()
 
     // fragment shader
     int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fragmentShaderSource = getFragmentShaderSource();
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+
+    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
     glCompileShader(fragmentShader);
 
     // check for shader compile errors
@@ -307,7 +193,6 @@ int compileAndLinkShaders()
     }
 
     glDeleteShader(vertexShader);
-
     glDeleteShader(fragmentShader);
 
     return shaderProgram;
@@ -318,36 +203,11 @@ int compileSkyboxShaders()
 {
 
     int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    const char *vertexShaderSource = getSkyBoxVertexShaderSource();
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glShaderSource(vertexShader, 1, &skyboxVertexShaderSource, NULL);
     glCompileShader(vertexShader);
 
     int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fragmentShaderSource = getSkyBoxFragmentShaderSource();
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-
-    int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    return shaderProgram;
-}
-
-// compiles the shaders fort the light cube
-int compileLightShaders()
-{
-    int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    const char *vertexShaderSource = getLightVertexShaderSource();
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fragmentShaderSource = getLightFragmentShaderSource();
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glShaderSource(fragmentShader, 1, &skyboxFragmentShaderSource, NULL);
     glCompileShader(fragmentShader);
 
     int shaderProgram = glCreateProgram();
@@ -382,10 +242,40 @@ int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, in
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, uv));
     glEnableVertexAttribArray(2);
 
+    // Normals
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, normal));
+    glEnableVertexAttribArray(3);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
     return vao;
+}
+
+unsigned int createSkyboxVAO()
+{
+    unsigned int skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    return skyboxVAO;
+}
+
+unsigned int createLightVAO()
+{
+    unsigned int lightVAO, lightVBO;
+    glGenVertexArrays(1, &lightVAO);
+    glGenBuffers(1, &lightVBO);
+    glBindVertexArray(lightVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    return lightVAO;
 }
 
 void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const glm::vec3 &cameraLookAt, const glm::vec3 &cameraUp)
@@ -407,32 +297,6 @@ void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const
         cameraPosition -= right * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPosition += right * cameraSpeed;
-}
-
-unsigned int createSkyboxVAO()
-{
-    unsigned int skyboxVAO, skyboxVBO;
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
-    glBindVertexArray(skyboxVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-    return skyboxVAO;
-}
-
-unsigned int createLightVAO()
-{
-    unsigned int cubeVAO, cubeVBO;
-    glGenVertexArrays(1, &cubeVBO);
-    glGenBuffers(1, &cubeVBO);
-    glBindVertexArray(cubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 6, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
-    return cubeVAO;
 }
 
 int main(int argc, char *argv[])
@@ -480,15 +344,15 @@ int main(int argc, char *argv[])
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
     // Compile and link shaders here ...
-    int shaderProgram = compileAndLinkShaders();
-    int lightProgram = compileLightShaders();
-    unsigned int lightVAO = createLightVAO();
+    int shaderProgram = compileAndLinkShaders(vertexShaderSource, fragmentShaderSource);
+    int groundVAO = createTexturedVertexArrayObject(texturedSquareArray, sizeof(texturedSquareArray));
 
     int skyboxShaderProgram = compileSkyboxShaders();
     unsigned int skyboxVAO = createSkyboxVAO();
 
-    // Define and upload geometry to the GPU here ...
-    int squareAO = createTexturedVertexArrayObject(texturedSquareArray, sizeof(texturedSquareArray));
+    // Compile and link shaders for the light cube
+    int cubeProgram = compileAndLinkShaders(vertexShader2Source, fragment2ShaderSource);
+    int cubeVAO = createLightVAO();
 
     // Variables to be used later in tutorial
     float angle = 0;
@@ -564,6 +428,8 @@ int main(int argc, char *argv[])
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
+        // Each frame, reset color of each pixel to glClearColor
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Frame time calculation
         float currentFrameTime = glfwGetTime();
@@ -580,12 +446,6 @@ int main(int argc, char *argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-        // process input
-        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
-
-        // Each frame, reset color of each pixel to glClearColor
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
         // Update camera horizontal and vertical angle and added a constant speed for camera rotation
         const float cameraAngularSpeed = 8.0f;
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
@@ -600,16 +460,21 @@ int main(int argc, char *argv[])
         // Update camera lookAt vector based on angles
         cameraLookAt = glm::vec3(cosf(phi) * cosf(theta), sinf(phi), -cosf(phi) * sinf(theta));
 
-        // view matrix
-        glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
-        GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
-        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+        // Process input
+        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
 
-        // Draw Skybox
+        // View Matrix
+        glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
+
+        // Projection Matrix
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
+
+        //////// Skybox
+        // Draw Skybox
         glDepthFunc(GL_LEQUAL);
         glUseProgram(skyboxShaderProgram);
 
+        // View matrix Skybox
         glm::mat4 viewMatrixSkybox = glm::mat4(glm::mat3(viewMatrix));
         GLuint viewMatrixSkyboxLocation = glGetUniformLocation(skyboxShaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixSkyboxLocation, 1, GL_FALSE, &viewMatrixSkybox[0][0]);
@@ -619,45 +484,52 @@ int main(int argc, char *argv[])
 
         glBindVertexArray(skyboxVAO);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices for
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // Reset depth function
 
         // bind Texture
         glBindTexture(GL_TEXTURE_2D, texture);
 
-        // Draw geometry
+        ////////// Draw geometry
+        // Draw Rectangle
         glUseProgram(shaderProgram);
+
+        GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+
         GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
         glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
 
-        // Draw Rectangle
-        glBindVertexArray(squareAO);
+        glBindVertexArray(groundVAO);
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(500.0f, 1.0f, 500.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(50.0f, 1.0f, 50.0f));
         worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
 
-        // Draw light cube
-        glUseProgram(lightProgram);
-        glUniform3f(glGetUniformLocation(lightProgram, "objectColor"), 1.0f, 0.5f, 0.31f);
-        glUniform3f(glGetUniformLocation(lightProgram, "lightColor"), 1.0f, 0.5f, 0.31f);
-        glUniform3f(glGetUniformLocation(lightProgram, "lightPos"), 1.0f, 1.0f, 1.0f);
+        // Light cube
+        glUseProgram(cubeProgram);
 
-        glBindVertexArray(lightVAO);
-        GLuint lightWorldMatrixLocation = glGetUniformLocation(lightProgram, "worldMatrix");
-        glm::mat4 lightWorldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(lightWorldMatrix, lightPos);
-        worldMatrix = glm::scale(lightWorldMatrix, glm::vec3(0.3f, 0.3f, 0.3f));
-        worldMatrix = glm::rotate(lightWorldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        glUniformMatrix4fv(lightWorldMatrixLocation, 1, GL_FALSE, &lightWorldMatrix[0][0]);
-        glDrawArrays(GL_TRIANGLES, 0, 36); // 6 vertices, starting at index 0
+        viewMatrixLocation = glGetUniformLocation(cubeProgram, "viewMatrix");
+        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+
+        projectionMatrixLocation = glGetUniformLocation(cubeProgram, "projectionMatrix");
+        glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        glBindVertexArray(cubeVAO);
+        worldMatrixLocation = glGetUniformLocation(cubeProgram, "worldMatrix");
+        worldMatrix = glm::mat4(1.0f);
+        worldMatrix = glm::translate(worldMatrix, lightPos);
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
-        glDepthFunc(GL_LEQUAL);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
