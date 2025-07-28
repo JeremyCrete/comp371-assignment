@@ -25,6 +25,14 @@ static const int HEIGHT = 1000; // Window height
 
 // lighting
 glm::vec3 lightPos(1.2f, 0.0f, 2.0f);
+glm::vec3 lightPos2(1.2f, 0.0f, 5.0f);
+
+// positions of the point lights
+glm::vec3 pointLightPositions[] = {
+    glm::vec3(0.7f, 0.2f, 2.0f),
+    glm::vec3(2.3f, 3.3f, -4.0f),
+    glm::vec3(-4.0f, 2.0f, -12.0f),
+    glm::vec3(0.0f, 0.0f, 3.0f)};
 
 std::string loadShaderSource(const std::string &filepath)
 {
@@ -359,8 +367,8 @@ int main(int argc, char *argv[])
     float rotationSpeed = 180.0f; // 180 degrees per second
     float lastFrameTime = glfwGetTime();
 
-    glm::vec3 cameraPosition(0.0f, 0.0f, 2.0f);
-    glm::vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraPosition(0.0f, 8.0f, 15.0f);
+    glm::vec3 cameraLookAt(0.0f, 0.0f, 0.0f);
     glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
     float cameraHorizontalAngle = 90.0f;
@@ -505,10 +513,25 @@ int main(int argc, char *argv[])
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(50.0f, 1.0f, 50.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(100.0f, 1.0f, 100.0f));
         worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
-        glUniform3f(glGetUniformLocation(shaderProgram, "lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+        // Set light properties
+        const float radius = 0.08f;
+        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        {
+            float lightX = sin(glfwGetTime()) * radius;
+            float lightZ = cos(glfwGetTime()) * radius;
+            pointLightPositions[i].x += lightX;
+            pointLightPositions[i].z += lightZ;
+        }
+
+        glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
+        glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[1].position"), pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
+        glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[2].position"), pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z);
+        glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[3].position"), pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z);
+
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
 
@@ -516,25 +539,46 @@ int main(int argc, char *argv[])
         if (angle > 360.0f) angle -= 360.0f;
 
         // Light cube
-        glUseProgram(cubeProgram);
 
-        viewMatrixLocation = glGetUniformLocation(cubeProgram, "viewMatrix");
-        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        {
+            glUseProgram(cubeProgram);
 
-        projectionMatrixLocation = glGetUniformLocation(cubeProgram, "projectionMatrix");
-        glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+            viewMatrixLocation = glGetUniformLocation(cubeProgram, "viewMatrix");
+            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
 
-        glBindVertexArray(cubeVAO);
-        worldMatrixLocation = glGetUniformLocation(cubeProgram, "worldMatrix");
+            projectionMatrixLocation = glGetUniformLocation(cubeProgram, "projectionMatrix");
+            glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
 
-        worldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(worldMatrix, lightPos); 
-        worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(2.0f, 3.0f, 2.0f));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(0.1f, 0.1f, 0.1f)); 
+            glBindVertexArray(cubeVAO);
+            worldMatrixLocation = glGetUniformLocation(cubeProgram, "worldMatrix");
+            worldMatrix = glm::mat4(1.0f);
 
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
+            worldMatrix = glm::mat4(1.0f);
+            worldMatrix = glm::translate(worldMatrix, glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
+
+
+            if (i == 0) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(5.0f, 3.0f, 7.0f));
+            }
+
+            if (i == 1) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(-1.0f, -1.0f, -1.0f));
+            }
+
+            if (i == 2) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(5.0f, 1.0f, 0.0f));
+            }
+
+            if (i == 3) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(-1.0f, -1.0f, -7.0f));
+            }
+
+            worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f));
+            glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
