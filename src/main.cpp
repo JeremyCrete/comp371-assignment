@@ -512,6 +512,9 @@ int main(int argc, char *argv[])
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
 
+        angle += rotationSpeed * dt; // increment angle each frame
+        if (angle > 360.0f) angle -= 360.0f;
+
         // Light cube
         glUseProgram(cubeProgram);
 
@@ -523,10 +526,12 @@ int main(int argc, char *argv[])
 
         glBindVertexArray(cubeVAO);
         worldMatrixLocation = glGetUniformLocation(cubeProgram, "worldMatrix");
+
         worldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(worldMatrix, lightPos);
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
-        worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        worldMatrix = glm::translate(worldMatrix, lightPos); 
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(2.0f, 3.0f, 2.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(0.1f, 0.1f, 0.1f)); 
+
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
