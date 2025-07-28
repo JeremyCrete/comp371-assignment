@@ -367,8 +367,8 @@ int main(int argc, char *argv[])
     float rotationSpeed = 180.0f; // 180 degrees per second
     float lastFrameTime = glfwGetTime();
 
-    glm::vec3 cameraPosition(0.0f, 0.0f, 2.0f);
-    glm::vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraPosition(0.0f, 8.0f, 15.0f);
+    glm::vec3 cameraLookAt(0.0f, 0.0f, 0.0f);
     glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 
     float cameraHorizontalAngle = 90.0f;
@@ -513,12 +513,12 @@ int main(int argc, char *argv[])
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
         glm::mat4 worldMatrix = glm::mat4(1.0f);
         worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(50.0f, 1.0f, 50.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(100.0f, 1.0f, 100.0f));
         worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 
         // Set light properties
-        const float radius = 0.1f;
+        const float radius = 0.08f;
         for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
         {
             float lightX = sin(glfwGetTime()) * radius;
@@ -534,6 +534,9 @@ int main(int argc, char *argv[])
 
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
+
+        angle += rotationSpeed * dt; // increment angle each frame
+        if (angle > 360.0f) angle -= 360.0f;
 
         // Light cube
 
@@ -553,7 +556,25 @@ int main(int argc, char *argv[])
 
             worldMatrix = glm::mat4(1.0f);
             worldMatrix = glm::translate(worldMatrix, glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
-            worldMatrix = glm::scale(worldMatrix, glm::vec3(0.2f));
+
+
+            if (i == 0) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(5.0f, 3.0f, 7.0f));
+            }
+
+            if (i == 1) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(-1.0f, -1.0f, -1.0f));
+            }
+
+            if (i == 2) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(5.0f, 1.0f, 0.0f));
+            }
+
+            if (i == 3) {
+                worldMatrix = glm::rotate(worldMatrix, glm::radians(angle), glm::vec3(-1.0f, -1.0f, -7.0f));
+            }
+
+            worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f));
             glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             glBindVertexArray(0);
