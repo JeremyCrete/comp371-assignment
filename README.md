@@ -4,6 +4,19 @@
 - Concordia University - Summer 2025  
 - Course: COMP 371 - Computer Graphics
 
+## Table of Contents
+
+- [Badges](#badges)
+- [Features Overview](#features-overview)
+- [Assignment Requirements Checklist](#assignment-requirements-checklist)
+  - [Libraries Used](#libraries-used)
+  - [Interactive Camera](#inetractive-camera)
+  - [Scene Content](#scene-content)
+  - [Advanced Features](#advanced-features-choose-1-for-this-assignment-and-implement-the-other-next-assignment)
+- [Screenshots](#screenshots)
+- [Controls](#controls)
+- [Credits](#credits)
+
 
 ## Badges
 ![OpenGL](https://img.shields.io/badge/OpenGL-4.x-blue?logo=opengl)
