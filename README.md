@@ -13,7 +13,7 @@
   - [Interactive Camera](#inetractive-camera)
   - [Scene Content](#scene-content)
   - [Advanced Features](#advanced-features-choose-1-for-this-assignment-and-implement-the-other-next-assignment)
-- [Screenshots](#screenshots)
+- [Demo](#demo)
 - [Controls](#controls)
 - [Credits](#credits)
 
@@ -53,7 +53,9 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 - [X] **Dynamic lighting** with multiple moving light sources
 - [ ] Hierarchical animation with at least 2 levels of rotation
 
-## Screenshots
+## Demo
+
+![Assignment 1 Demo](media/ezgif-265367ecf4203a.gif)
 
 ## Controls
 
