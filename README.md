@@ -65,6 +65,7 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 | Move Backward       | `S`                |
 | Move Left           | `A`                |
 | Move Right          | `D`                |
+| Increase Movement Speed          | `SHIFT`                |
 | Look Around         | Mouse movement     |
 | Exit Program        | `ESC`              |
 
