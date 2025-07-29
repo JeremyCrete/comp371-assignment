@@ -55,7 +55,7 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 
 ## Demo
 
-![Assignment 1 Demo](media/ezgif-265367ecf4203a.gif)
+![Assignment 1 Demo](media/demo.gif)
 
 ## Controls
 
