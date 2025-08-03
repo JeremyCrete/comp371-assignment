@@ -92,6 +92,7 @@ std::string vertexShader2Str = loadShaderSource("Shaders/shader2.vert");
 const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
