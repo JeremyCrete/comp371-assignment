@@ -17,8 +17,15 @@
 #include <GLFW/glfw3.h> // GLFW provides a cross-platform interface for creating a graphical context,
                         // initializing OpenGL and binding inputs
 
-#include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
-#include <glm/gtc/matrix_transform.hpp> // GLM provides matrix transformations
+// GLM is an optimized math library with syntax to similar to OpenGL Shading Language
+// GLM provides matrix transformations
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#include <glm.hpp>                  
+#include <gtc/matrix_transform.hpp> 
+#else
+#include <glm/glm.hpp>                  
+#include <glm/gtc/matrix_transform.hpp> 
+#endif
 
 static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
@@ -32,9 +39,9 @@ glm::vec3 pointLightPositions[] = {
     glm::vec3(0.7f, 0.2f, 2.0f),
     glm::vec3(2.3f, 3.3f, -4.0f),
     glm::vec3(-4.0f, 2.0f, -12.0f),
-    glm::vec3(0.0f, 0.0f, 3.0f)};
+    glm::vec3(0.0f, 0.0f, 3.0f) };
 
-std::string loadShaderSource(const std::string &filepath)
+std::string loadShaderSource(const std::string& filepath)
 {
     std::ifstream file(filepath);
     std::stringstream buffer;
@@ -50,23 +57,42 @@ std::string loadShaderSource(const std::string &filepath)
     return buffer.str();
 }
 
+#if defined(WIN32) || defined(_WIN32)
+std::string vertexShaderStr = loadShaderSource("src\\Shaders\\shader.vert");
+const char* vertexShaderSource = vertexShaderStr.c_str();
+
+std::string fragmentShaderStr = loadShaderSource("src\\Shaders\\shader.frag");
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
+
+std::string skyboxVertexShaderStr = loadShaderSource("src\\Shaders\\skybox.vert");
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+
+std::string skyboxFragmentShaderStr = loadShaderSource("src\\Shaders\\skybox.frag");
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+
+std::string vertexShader2Str = loadShaderSource("src\\Shaders\\shader2.vert");
+const char* vertexShader2Source = vertexShader2Str.c_str();
+
+std::string fragment2ShaderStr = loadShaderSource("src\\Shaders\\shader2.frag");
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
+#else
 std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
-const char *vertexShaderSource = vertexShaderStr.c_str();
+const char* vertexShaderSource = vertexShaderStr.c_str();
 
 std::string fragmentShaderStr = loadShaderSource("Shaders/shader.frag");
-const char *fragmentShaderSource = fragmentShaderStr.c_str();
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
 
 std::string skyboxVertexShaderStr = loadShaderSource("Shaders/skybox.vert");
-const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
 std::string skyboxFragmentShaderStr = loadShaderSource("Shaders/skybox.frag");
-const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
 std::string vertexShader2Str = loadShaderSource("Shaders/shader2.vert");
-const char *vertexShader2Source = vertexShader2Str.c_str();
+const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
-const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+#endif
 
 struct TexturedColoredVertex
 {
@@ -136,8 +162,19 @@ float skyboxVertices[] = {
     1.0f, -1.0f, -1.0f,
     1.0f, -1.0f, -1.0f,
     -1.0f, -1.0f, 1.0f,
-    1.0f, -1.0f, 1.0f};
+    1.0f, -1.0f, 1.0f 
+};
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+std::vector<std::string> facesCubemap = {
+    "src\\Textures\\skybox\\px.png", // right
+    "src\\Textures\\skybox\\nx.png", // left
+    "src\\Textures\\skybox\\py.png", // top
+    "src\\Textures\\skybox\\ny.png", // bottom
+    "src\\Textures\\skybox\\pz.png", // front
+    "src\\Textures\\skybox\\nz.png"  // back
+};
+#else
 std::vector<std::string> facesCubemap = {
     "Textures/skybox/px.png", // right
     "Textures/skybox/nx.png", // left
@@ -146,8 +183,9 @@ std::vector<std::string> facesCubemap = {
     "Textures/skybox/pz.png", // front
     "Textures/skybox/nz.png"  // back
 };
+#endif
 
-int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
+int compileAndLinkShaders(const char* vertexSource, const char* fragmentSource)
 {
     // compile and link shader program
     // return shader program id
@@ -167,7 +205,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // fragment shader
@@ -182,7 +220,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // link shaders
@@ -197,7 +235,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     glDeleteShader(vertexShader);
@@ -228,7 +266,7 @@ int compileSkyboxShaders()
     return shaderProgram;
 }
 
-int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, int arraySize)
+int createTexturedVertexArrayObject(const TexturedColoredVertex* vertexArray, int arraySize)
 {
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
@@ -239,19 +277,19 @@ int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, in
     glBufferData(GL_ARRAY_BUFFER, arraySize, vertexArray, GL_STATIC_DRAW);
 
     // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, position));
     glEnableVertexAttribArray(0);
 
     // Color
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, color));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, color));
     glEnableVertexAttribArray(1);
 
     // Texture coordinates
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, uv));
     glEnableVertexAttribArray(2);
 
     // Normals
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, normal));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, normal));
     glEnableVertexAttribArray(3);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -269,7 +307,7 @@ unsigned int createSkyboxVAO()
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return skyboxVAO;
 }
 
@@ -282,11 +320,11 @@ unsigned int createLightVAO()
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return lightVAO;
 }
 
-void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const glm::vec3 &cameraLookAt, const glm::vec3 &cameraUp)
+void processInput(GLFWwindow* window, float dt, glm::vec3& cameraPosition, const glm::vec3& cameraLookAt, const glm::vec3& cameraUp)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -307,7 +345,7 @@ void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const
         cameraPosition += right * cameraSpeed;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
     double lastMousePosX, lastMousePosY;
@@ -325,7 +363,7 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 1", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 1", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -386,7 +424,7 @@ int main(int argc, char *argv[])
     for (unsigned int i = 0; i < 6; i++)
     {
         int width, height, nrChannels;
-        unsigned char *data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+        unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
         if (data)
         {
             GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
@@ -419,7 +457,15 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int texWidth, texHeight, nrChannels;
-    unsigned char *data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    unsigned char* data = stbi_load("src\\Textures\\stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+#else
+    unsigned char* data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+#endif // 
+
+
+    
     if (data)
     {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -590,7 +636,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
