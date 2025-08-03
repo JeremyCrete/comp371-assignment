@@ -22,6 +22,9 @@
 
 #include "ModelLoader.h"
 
+glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
+
+
 //used to import model using assimp
 
 void Mesh::setupMesh() {
@@ -401,6 +404,17 @@ void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const
         cameraPosition -= right * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPosition += right * cameraSpeed;
+
+     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        currentModelColor = glm::vec3(1.0f, 0.0f, 0.0f); //red
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        currentModelColor = glm::vec3(0.0f, 1.0f, 0.0f); //green
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+        currentModelColor = glm::vec3(0.0f, 0.0f, 1.0f); //blue
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+        currentModelColor = glm::vec3(1.0f, 1.0f, 0.0f); //yellow
+    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
+        currentModelColor = glm::vec3(1.0f, 0.0f, 1.0f); //magenta
 }
 
 int main(int argc, char *argv[])
@@ -444,7 +458,15 @@ int main(int argc, char *argv[])
     }
     glEnable(GL_DEPTH_TEST);
 
-    std::vector<Mesh> cubeMeshes = loadModel("Models/cube.obj");
+    std::string modelVertSrc = loadShaderSource("Shaders/model.vert");
+    std::string modelFragSrc = loadShaderSource("Shaders/model.frag");
+    const char* modelVert = modelVertSrc.c_str();
+    const char* modelFrag = modelFragSrc.c_str();
+    int modelShaderProgram = compileAndLinkShaders(modelVert, modelFrag);
+
+
+
+    std::vector<Mesh> cubeMeshes = loadModel("Models/ca911.obj");
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -634,19 +656,25 @@ int main(int argc, char *argv[])
         glBindVertexArray(0);
 
         //draw models loaded using assimp
-        glUseProgram(shaderProgram);
+       glUseProgram(modelShaderProgram);
 
-        GLuint modelMatrixLoc = glGetUniformLocation(shaderProgram, "worldMatrix");
-        GLuint viewLoc = glGetUniformLocation(shaderProgram, "viewMatrix");
-        GLuint projLoc = glGetUniformLocation(shaderProgram, "projectionMatrix");
+        // Set matrices for model shader
+        GLuint modelViewLoc = glGetUniformLocation(modelShaderProgram, "viewMatrix");
+        GLuint modelProjLoc = glGetUniformLocation(modelShaderProgram, "projectionMatrix");
+        GLuint modelWorldLoc = glGetUniformLocation(modelShaderProgram, "worldMatrix");
 
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
-        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+        glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
 
         glm::mat4 cubeModel = glm::mat4(1.0f);
         cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f)); 
-        cubeModel = glm::scale(cubeModel, glm::vec3(1.0f)); 
-        glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, &cubeModel[0][0]);
+        cubeModel = glm::scale(cubeModel, glm::vec3(1.0f));
+
+        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &cubeModel[0][0]);
+
+        GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
+        glUniform3fv(colorLoc, 1, &currentModelColor[0]);
+
 
         for (const Mesh& mesh : cubeMeshes) {
             mesh.Draw();
