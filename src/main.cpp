@@ -20,6 +20,102 @@
 #include <glm/glm.hpp>                  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
 #include <glm/gtc/matrix_transform.hpp> // GLM provides matrix transformations
 
+#include "ModelLoader.h"
+
+//used to import model using assimp
+
+void Mesh::setupMesh() {
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+
+    glBindVertexArray(0);
+}
+
+void Mesh::Draw() const {
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+        Vertex vertex;
+        vertex.Position = glm::vec3(
+            mesh->mVertices[i].x,
+            mesh->mVertices[i].y,
+            mesh->mVertices[i].z
+        );
+        vertex.Normal = mesh->HasNormals()
+            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
+            : glm::vec3(0.0f);
+        vertex.TexCoords = mesh->mTextureCoords[0]
+            ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+            : glm::vec2(0.0f);
+        vertices.push_back(vertex);
+    }
+
+    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
+        const aiFace& face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; ++j)
+            indices.push_back(face.mIndices[j]);
+    }
+
+    Mesh newMesh;
+    newMesh.vertices = std::move(vertices);
+    newMesh.indices = std::move(indices);
+    newMesh.setupMesh();
+    meshes.push_back(std::move(newMesh));
+}
+
+void processNode(aiNode* node, const aiScene* scene, std::vector<Mesh>& meshes) {
+    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        processMesh(mesh, meshes);
+    }
+
+    for (unsigned int i = 0; i < node->mNumChildren; ++i) {
+        processNode(node->mChildren[i], scene, meshes);
+    }
+}
+
+std::vector<Mesh> loadModel(const std::string& path) {
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(
+        path,
+        aiProcess_Triangulate |
+        aiProcess_GenSmoothNormals |
+        aiProcess_FlipUVs |
+        aiProcess_JoinIdenticalVertices
+    );
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+        std::cerr << "ASSIMP ERROR: " << importer.GetErrorString() << std::endl;
+        return {};
+    }
+
+    std::vector<Mesh> meshes;
+    processNode(scene->mRootNode, scene, meshes);
+    return meshes;
+}
+
 static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
 
@@ -278,7 +374,7 @@ unsigned int createLightVAO()
     unsigned int lightVAO, lightVBO;
     glGenVertexArrays(1, &lightVAO);
     glGenBuffers(1, &lightVBO);
-    glBindVertexArray(lightVBO);
+    glBindVertexArray(lightVAO);
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
@@ -347,6 +443,8 @@ int main(int argc, char *argv[])
         return -1;
     }
     glEnable(GL_DEPTH_TEST);
+
+    std::vector<Mesh> cubeMeshes = loadModel("Models/cube.obj");
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -519,7 +617,7 @@ int main(int argc, char *argv[])
 
         // Set light properties
         const float radius = 0.08f;
-        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        for (unsigned int i = 0; i < 4; i++)
         {
             float lightX = sin(glfwGetTime()) * radius;
             float lightZ = cos(glfwGetTime()) * radius;
@@ -535,12 +633,32 @@ int main(int argc, char *argv[])
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
 
+        //draw models loaded using assimp
+        glUseProgram(shaderProgram);
+
+        GLuint modelMatrixLoc = glGetUniformLocation(shaderProgram, "worldMatrix");
+        GLuint viewLoc = glGetUniformLocation(shaderProgram, "viewMatrix");
+        GLuint projLoc = glGetUniformLocation(shaderProgram, "projectionMatrix");
+
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        glm::mat4 cubeModel = glm::mat4(1.0f);
+        cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f)); 
+        cubeModel = glm::scale(cubeModel, glm::vec3(1.0f)); 
+        glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, &cubeModel[0][0]);
+
+        for (const Mesh& mesh : cubeMeshes) {
+            mesh.Draw();
+        }
+
+
         angle += rotationSpeed * dt; // increment angle each frame
         if (angle > 360.0f) angle -= 360.0f;
 
         // Light cube
 
-        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        for (unsigned int i = 0; i < 4; i++)
         {
             glUseProgram(cubeProgram);
 
