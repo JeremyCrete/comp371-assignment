@@ -23,6 +23,7 @@
 #include "ModelLoader.h"
 
 glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
+int currentTextureMode = 1;
 
 
 //used to import model using assimp
@@ -406,15 +407,9 @@ void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const
         cameraPosition += right * cameraSpeed;
 
      if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-        currentModelColor = glm::vec3(1.0f, 0.0f, 0.0f); //red
+        currentTextureMode = 1; //Onyx
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-        currentModelColor = glm::vec3(0.0f, 1.0f, 0.0f); //green
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-        currentModelColor = glm::vec3(0.0f, 0.0f, 1.0f); //blue
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-        currentModelColor = glm::vec3(1.0f, 1.0f, 0.0f); //yellow
-    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
-        currentModelColor = glm::vec3(1.0f, 0.0f, 1.0f); //magenta
+        currentTextureMode = 2; //Gold
 }
 
 int main(int argc, char *argv[])
@@ -435,7 +430,7 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 1", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -554,7 +549,7 @@ int main(int argc, char *argv[])
     stbi_image_free(data);
 
 
-
+    //load onyx Bake from blender
     unsigned int cyberTexture;
     glGenTextures(1, &cyberTexture);
     glBindTexture(GL_TEXTURE_2D, cyberTexture);
@@ -574,6 +569,28 @@ int main(int argc, char *argv[])
         std::cerr << "Failed to load cyberBake.png" << std::endl;
     }
     stbi_image_free(cyberData);
+
+
+        // Load Gold Color Map
+        unsigned int goldTexture;
+        glGenTextures(1, &goldTexture);
+        glBindTexture(GL_TEXTURE_2D, goldTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int goldWidth, goldHeight, goldChannels;
+        unsigned char* goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+        if (goldData) {
+            GLenum format = (goldChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, goldWidth, goldHeight, 0, format, GL_UNSIGNED_BYTE, goldData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Loaded cyberrGold.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load cyberrGold.png" << std::endl;
+        }
+        stbi_image_free(goldData);
 
 
     // Entering Main Loop
@@ -698,9 +715,15 @@ int main(int argc, char *argv[])
         GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
+
         glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, cyberTexture);
-    glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+        if (currentTextureMode == 1) {
+            glBindTexture(GL_TEXTURE_2D, cyberTexture); // cyberBake.png (onyx)
+        } else if (currentTextureMode == 2) {
+            glBindTexture(GL_TEXTURE_2D, goldTexture); // cyberrGold.png
+        }
+        glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+
 
 
 
@@ -709,10 +732,10 @@ int main(int argc, char *argv[])
         }
 
         // Rebind stone texture for floor
-    glUseProgram(shaderProgram); // Use floor shader again
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
-    glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
+        glUseProgram(shaderProgram); // Use floor shader again
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
+        glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
 
 
 

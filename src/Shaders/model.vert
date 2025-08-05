@@ -8,10 +8,10 @@ uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 
-out vec2 TexCoords;
+out vec2 TexCoords; 
 
 void main()
 {
-    TexCoords = aTexCoords;
     gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(aPos, 1.0);
+    TexCoords = aTexCoords; 
 }
