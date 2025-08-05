@@ -22,6 +22,7 @@ struct Mesh {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     unsigned int textureID =0;
+    std::string name;
 
     void setupMesh();
     void Draw() const;

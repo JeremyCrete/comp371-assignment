@@ -59,6 +59,9 @@ void Mesh::Draw() const {
 void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    Mesh newMesh;
+    newMesh.name = mesh->mName.C_Str();
+
 
     for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
         Vertex vertex;
@@ -82,7 +85,7 @@ void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes) {
             indices.push_back(face.mIndices[j]);
     }
 
-    Mesh newMesh;
+    
     newMesh.vertices = std::move(vertices);
     newMesh.indices = std::move(indices);
     newMesh.setupMesh();
@@ -550,25 +553,25 @@ int main(int argc, char *argv[])
 
 
     //load onyx Bake from blender
-    unsigned int cyberTexture;
-    glGenTextures(1, &cyberTexture);
-    glBindTexture(GL_TEXTURE_2D, cyberTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        unsigned int cyberTexture;
+        glGenTextures(1, &cyberTexture);
+        glBindTexture(GL_TEXTURE_2D, cyberTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    int cyberWidth, cyberHeight, cyberChannels;
-    unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
-    if (cyberData) {
-        GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, cyberWidth, cyberHeight, 0, format, GL_UNSIGNED_BYTE, cyberData);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        std::cerr << "Successfully loaded cyberBake.png" << std::endl;
-    } else {
-        std::cerr << "Failed to load cyberBake.png" << std::endl;
-    }
-    stbi_image_free(cyberData);
+        int cyberWidth, cyberHeight, cyberChannels;
+        unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+        if (cyberData) {
+            GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, cyberWidth, cyberHeight, 0, format, GL_UNSIGNED_BYTE, cyberData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Successfully loaded cyberBake.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load cyberBake.png" << std::endl;
+        }
+        stbi_image_free(cyberData);
 
 
         // Load Gold Color Map
@@ -591,6 +594,49 @@ int main(int argc, char *argv[])
             std::cerr << "Failed to load cyberrGold.png" << std::endl;
         }
         stbi_image_free(goldData);
+
+        unsigned int tireTexture;
+        glGenTextures(1, &tireTexture);
+        glBindTexture(GL_TEXTURE_2D, tireTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int tireWidth, tireHeight, tireChannels;
+        unsigned char* tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0); 
+        if (tireData) {
+            GLenum format = (tireChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, tireWidth, tireHeight, 0, format, GL_UNSIGNED_BYTE, tireData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Loaded tireBake.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load tireBake.png" << std::endl;
+        }
+        stbi_image_free(tireData);
+
+        unsigned int bumperBorderTexture;
+        glGenTextures(1, &bumperBorderTexture);
+        glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int bbWidth, bbHeight, bbChannels;
+        unsigned char* bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+        if (bbData) {
+            GLenum format = (bbChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, bbWidth, bbHeight, 0, format, GL_UNSIGNED_BYTE, bbData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        } else {
+            std::cout << "Failed to load bumperborderBake.png\n";
+        }
+        stbi_image_free(bbData);
+
+
+
 
 
     // Entering Main Loop
@@ -716,20 +762,28 @@ int main(int argc, char *argv[])
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
 
-        glActiveTexture(GL_TEXTURE0);
-        if (currentTextureMode == 1) {
-            glBindTexture(GL_TEXTURE_2D, cyberTexture); // cyberBake.png (onyx)
-        } else if (currentTextureMode == 2) {
-            glBindTexture(GL_TEXTURE_2D, goldTexture); // cyberrGold.png
-        }
-        glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
-
-
-
-
         for (const Mesh& mesh : cubeMeshes) {
-            mesh.Draw();
-        }
+        glActiveTexture(GL_TEXTURE0);
+
+    if (mesh.name.find("Tire") != std::string::npos || mesh.name.find("Protector") != std::string::npos || mesh.name.find("Rims") != std::string::npos) {
+        glBindTexture(GL_TEXTURE_2D, tireTexture);
+
+    }
+    else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border") {
+        glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+    } 
+    
+    else if (currentTextureMode == 1) {
+        glBindTexture(GL_TEXTURE_2D, cyberTexture);
+
+    } else if (currentTextureMode == 2) {
+        glBindTexture(GL_TEXTURE_2D, goldTexture);
+    }
+
+    glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+    mesh.Draw();
+}
+
 
         // Rebind stone texture for floor
         glUseProgram(shaderProgram); // Use floor shader again
