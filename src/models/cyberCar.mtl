@@ -59,7 +59,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd /Users/jeremycrete/Developer/comp-371Project/comp371-assignment/src/Textures/onyx.jpg
+map_Kd src/Textures/onyx.jpg
 
 newmtl Tire
 Ns 125.702492
