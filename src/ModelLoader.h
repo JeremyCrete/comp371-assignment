@@ -21,6 +21,7 @@ struct Mesh {
     unsigned int VAO, VBO, EBO;
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    unsigned int textureID =0;
 
     void setupMesh();
     void Draw() const;

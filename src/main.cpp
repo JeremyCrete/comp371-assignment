@@ -466,7 +466,7 @@ int main(int argc, char *argv[])
 
 
 
-    std::vector<Mesh> cubeMeshes = loadModel("Models/ca911.obj");
+    std::vector<Mesh> cubeMeshes = loadModel("Models/cyberCar.obj");
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -553,6 +553,29 @@ int main(int argc, char *argv[])
 
     stbi_image_free(data);
 
+
+
+    unsigned int cyberTexture;
+    glGenTextures(1, &cyberTexture);
+    glBindTexture(GL_TEXTURE_2D, cyberTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int cyberWidth, cyberHeight, cyberChannels;
+    unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+    if (cyberData) {
+        GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, cyberWidth, cyberHeight, 0, format, GL_UNSIGNED_BYTE, cyberData);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cerr << "Successfully loaded cyberBake.png" << std::endl;
+    } else {
+        std::cerr << "Failed to load cyberBake.png" << std::endl;
+    }
+    stbi_image_free(cyberData);
+
+
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
@@ -616,8 +639,8 @@ int main(int argc, char *argv[])
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // Reset depth function
 
-        // bind Texture
-        glBindTexture(GL_TEXTURE_2D, texture);
+
+
 
         ////////// Draw geometry
         // Draw Rectangle
@@ -668,17 +691,29 @@ int main(int argc, char *argv[])
 
         glm::mat4 cubeModel = glm::mat4(1.0f);
         cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f)); 
-        cubeModel = glm::scale(cubeModel, glm::vec3(1.0f));
+        cubeModel = glm::scale(cubeModel, glm::vec3(4.0f));
 
         glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &cubeModel[0][0]);
 
         GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
+        glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, cyberTexture);
+    glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+
+
 
         for (const Mesh& mesh : cubeMeshes) {
             mesh.Draw();
         }
+
+        // Rebind stone texture for floor
+    glUseProgram(shaderProgram); // Use floor shader again
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
+    glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
+
 
 
         angle += rotationSpeed * dt; // increment angle each frame

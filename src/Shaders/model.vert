@@ -1,14 +1,17 @@
-#version 150 core
+#version 330 core
 
-in vec3 position;
-in vec3 normal;
-in vec2 texCoord;
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoords;
 
 uniform mat4 worldMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projectionMatrix;
 
+out vec2 TexCoords;
+
 void main()
 {
-    gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(position, 1.0);
+    TexCoords = aTexCoords;
+    gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(aPos, 1.0);
 }
