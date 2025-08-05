@@ -27,6 +27,109 @@
 #include <glm/gtc/matrix_transform.hpp> 
 #endif
 
+#include "ModelLoader.h"
+
+glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
+int currentTextureMode = 1;
+
+
+//used to import model using assimp
+
+void Mesh::setupMesh() {
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
+
+    glBindVertexArray(0);
+}
+
+void Mesh::Draw() const {
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    Mesh newMesh;
+    newMesh.name = mesh->mName.C_Str();
+
+
+    for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
+        Vertex vertex;
+        vertex.Position = glm::vec3(
+            mesh->mVertices[i].x,
+            mesh->mVertices[i].y,
+            mesh->mVertices[i].z
+        );
+        vertex.Normal = mesh->HasNormals()
+            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
+            : glm::vec3(0.0f);
+        vertex.TexCoords = mesh->mTextureCoords[0]
+            ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+            : glm::vec2(0.0f);
+        vertices.push_back(vertex);
+    }
+
+    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
+        const aiFace& face = mesh->mFaces[i];
+        for (unsigned int j = 0; j < face.mNumIndices; ++j)
+            indices.push_back(face.mIndices[j]);
+    }
+
+    
+    newMesh.vertices = std::move(vertices);
+    newMesh.indices = std::move(indices);
+    newMesh.setupMesh();
+    meshes.push_back(std::move(newMesh));
+}
+
+void processNode(aiNode* node, const aiScene* scene, std::vector<Mesh>& meshes) {
+    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        processMesh(mesh, meshes);
+    }
+
+    for (unsigned int i = 0; i < node->mNumChildren; ++i) {
+        processNode(node->mChildren[i], scene, meshes);
+    }
+}
+
+std::vector<Mesh> loadModel(const std::string& path) {
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(
+        path,
+        aiProcess_Triangulate |
+        aiProcess_GenSmoothNormals |
+        aiProcess_FlipUVs |
+        aiProcess_JoinIdenticalVertices
+    );
+
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+        std::cerr << "ASSIMP ERROR: " << importer.GetErrorString() << std::endl;
+        return {};
+    }
+
+    std::vector<Mesh> meshes;
+    processNode(scene->mRootNode, scene, meshes);
+    return meshes;
+}
+
 static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
 
@@ -317,7 +420,7 @@ unsigned int createLightVAO()
     unsigned int lightVAO, lightVBO;
     glGenVertexArrays(1, &lightVAO);
     glGenBuffers(1, &lightVBO);
-    glBindVertexArray(lightVBO);
+    glBindVertexArray(lightVAO);
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
@@ -344,6 +447,11 @@ void processInput(GLFWwindow* window, float dt, glm::vec3& cameraPosition, const
         cameraPosition -= right * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPosition += right * cameraSpeed;
+
+     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        currentTextureMode = 1; //Onyx
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        currentTextureMode = 2; //Gold
 }
 
 int main(int argc, char* argv[])
@@ -364,7 +472,7 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 1", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -386,6 +494,16 @@ int main(int argc, char* argv[])
         return -1;
     }
     glEnable(GL_DEPTH_TEST);
+
+    std::string modelVertSrc = loadShaderSource("Shaders/model.vert");
+    std::string modelFragSrc = loadShaderSource("Shaders/model.frag");
+    const char* modelVert = modelVertSrc.c_str();
+    const char* modelFrag = modelFragSrc.c_str();
+    int modelShaderProgram = compileAndLinkShaders(modelVert, modelFrag);
+
+
+
+    std::vector<Mesh> cubeMeshes = loadModel("Models/cyberCar.obj");
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -480,6 +598,97 @@ int main(int argc, char* argv[])
 
     stbi_image_free(data);
 
+
+    //load onyx Bake from blender
+        unsigned int cyberTexture;
+        glGenTextures(1, &cyberTexture);
+        glBindTexture(GL_TEXTURE_2D, cyberTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int cyberWidth, cyberHeight, cyberChannels;
+        unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+        if (cyberData) {
+            GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, cyberWidth, cyberHeight, 0, format, GL_UNSIGNED_BYTE, cyberData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Successfully loaded cyberBake.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load cyberBake.png" << std::endl;
+        }
+        stbi_image_free(cyberData);
+
+
+        // Load Gold Color Map
+        unsigned int goldTexture;
+        glGenTextures(1, &goldTexture);
+        glBindTexture(GL_TEXTURE_2D, goldTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int goldWidth, goldHeight, goldChannels;
+        unsigned char* goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+        if (goldData) {
+            GLenum format = (goldChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, goldWidth, goldHeight, 0, format, GL_UNSIGNED_BYTE, goldData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Loaded cyberrGold.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load cyberrGold.png" << std::endl;
+        }
+        stbi_image_free(goldData);
+        
+
+        //loads the wheels
+        unsigned int tireTexture;
+        glGenTextures(1, &tireTexture);
+        glBindTexture(GL_TEXTURE_2D, tireTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int tireWidth, tireHeight, tireChannels;
+        unsigned char* tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0); 
+        if (tireData) {
+            GLenum format = (tireChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, tireWidth, tireHeight, 0, format, GL_UNSIGNED_BYTE, tireData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            std::cerr << "Loaded tireBake.png" << std::endl;
+        } else {
+            std::cerr << "Failed to load tireBake.png" << std::endl;
+        }
+        stbi_image_free(tireData);
+
+        //loads the bumper and arch texture
+        unsigned int bumperBorderTexture;
+        glGenTextures(1, &bumperBorderTexture);
+        glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        int bbWidth, bbHeight, bbChannels;
+        unsigned char* bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+        if (bbData) {
+            GLenum format = (bbChannels == 4) ? GL_RGBA : GL_RGB;
+            glTexImage2D(GL_TEXTURE_2D, 0, format, bbWidth, bbHeight, 0, format, GL_UNSIGNED_BYTE, bbData);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        } else {
+            std::cout << "Failed to load bumperborderBake.png\n";
+        }
+        stbi_image_free(bbData);
+
+
+
+
+
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
@@ -543,8 +752,8 @@ int main(int argc, char* argv[])
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // Reset depth function
 
-        // bind Texture
-        glBindTexture(GL_TEXTURE_2D, texture);
+
+
 
         ////////// Draw geometry
         // Draw Rectangle
@@ -566,7 +775,7 @@ int main(int argc, char* argv[])
 
         // Set light properties
         const float radius = 0.08f;
-        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        for (unsigned int i = 0; i < 4; i++)
         {
             float lightX = sin(glfwGetTime()) * radius;
             float lightZ = cos(glfwGetTime()) * radius;
@@ -582,12 +791,64 @@ int main(int argc, char* argv[])
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
         glBindVertexArray(0);
 
+        //draw models loaded using assimp
+       glUseProgram(modelShaderProgram);
+
+        // Set matrices for model shader
+        GLuint modelViewLoc = glGetUniformLocation(modelShaderProgram, "viewMatrix");
+        GLuint modelProjLoc = glGetUniformLocation(modelShaderProgram, "projectionMatrix");
+        GLuint modelWorldLoc = glGetUniformLocation(modelShaderProgram, "worldMatrix");
+
+        glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        glm::mat4 cubeModel = glm::mat4(1.0f);
+        cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f)); 
+        cubeModel = glm::scale(cubeModel, glm::vec3(4.0f));
+
+        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &cubeModel[0][0]);
+
+        GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
+        glUniform3fv(colorLoc, 1, &currentModelColor[0]);
+
+
+        for (const Mesh& mesh : cubeMeshes) {
+        glActiveTexture(GL_TEXTURE0);
+
+    if (mesh.name.find("Tire") != std::string::npos || mesh.name.find("Protector") != std::string::npos || mesh.name.find("Rims") != std::string::npos) {
+        glBindTexture(GL_TEXTURE_2D, tireTexture);
+
+    }
+    else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border") {
+        glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+    } 
+    
+    else if (currentTextureMode == 1) {
+        glBindTexture(GL_TEXTURE_2D, cyberTexture);
+
+    } else if (currentTextureMode == 2) {
+        glBindTexture(GL_TEXTURE_2D, goldTexture);
+    }
+
+    glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+    mesh.Draw();
+}
+
+
+        // Rebind stone texture for floor
+        glUseProgram(shaderProgram); // Use floor shader again
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
+        glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
+
+
+
         angle += rotationSpeed * dt; // increment angle each frame
         if (angle > 360.0f) angle -= 360.0f;
 
         // Light cube
 
-        for (unsigned int i = 0; i <= pointLightPositions->length(); i++)
+        for (unsigned int i = 0; i < 4; i++)
         {
             glUseProgram(cubeProgram);
 
