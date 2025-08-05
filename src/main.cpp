@@ -594,7 +594,9 @@ int main(int argc, char *argv[])
             std::cerr << "Failed to load cyberrGold.png" << std::endl;
         }
         stbi_image_free(goldData);
+        
 
+        //loads the wheels
         unsigned int tireTexture;
         glGenTextures(1, &tireTexture);
         glBindTexture(GL_TEXTURE_2D, tireTexture);
@@ -615,6 +617,7 @@ int main(int argc, char *argv[])
         }
         stbi_image_free(tireData);
 
+        //loads the bumper and arch texture
         unsigned int bumperBorderTexture;
         glGenTextures(1, &bumperBorderTexture);
         glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
