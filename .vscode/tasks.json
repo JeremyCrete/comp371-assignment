@@ -15,10 +15,14 @@
         "/opt/homebrew/include",
         "-L",
         "/opt/homebrew/lib",
+        "-L",
+        "/opt/homebrew/lib", 
+        "-lassimp",
         "-lglfw",
         "-lGLEW",
         "-framework",
-        "OpenGL"
+        "OpenGL",
+
       ],
       "options": {
         "cwd": "${fileDirname}"
