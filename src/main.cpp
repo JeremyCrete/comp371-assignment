@@ -32,6 +32,7 @@
 
 glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
 int currentTextureMode = 1;
+ShadowMapFBO m_shadowMapFBO;
 
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
@@ -39,7 +40,17 @@ glm::vec3 pointLightPositions[] = {
 
 };
 
+static const int WIDTH = 1200;  // Window width
+static const int HEIGHT = 1000; // Window height
+
 // used to import model using assimp
+void ShadowPass()
+{
+
+    // 1. Render depth of scene to texture (from light's perspective)
+    // - Get light projection/view matrix.
+    // - Render scene
+}
 
 void Mesh::setupMesh()
 {
@@ -142,9 +153,6 @@ std::vector<Mesh> loadModel(const std::string &path)
     return meshes;
 }
 
-static const int WIDTH = 1200;  // Window width
-static const int HEIGHT = 1000; // Window height
-
 std::string loadShaderSource(const std::string &filepath)
 {
     std::ifstream file(filepath);
@@ -179,6 +187,12 @@ const char *vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("src\\Shaders\\shader2.frag");
 const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+
+std::string shadowVertexShaderStr = loadShaderSource("Shaders\\shadowMap.vert");
+const char *shadowVertexShaderSource = vertexShader2Str.c_str();
+
+std::string shadowFragmentShaderStr = loadShaderSource("Shaders\\shadowMap.frag");
+const char *shadowFragmentShaderSource = fragment2ShaderStr.c_str();
 #else
 std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
 const char *vertexShaderSource = vertexShaderStr.c_str();
@@ -197,6 +211,12 @@ const char *vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
 const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+
+std::string shadowVertexShaderStr = loadShaderSource("Shaders/shadowMap.vert");
+const char *shadowVertexShaderSource = vertexShader2Str.c_str();
+
+std::string shadowFragmentShaderStr = loadShaderSource("Shaders/shadowMap.frag");
+const char *shadowFragmentShaderSource = fragment2ShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
@@ -604,7 +624,11 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int cyberWidth, cyberHeight, cyberChannels;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    unsigned char *cyberData = stbi_load("src\\models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+#else
     unsigned char *cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+#endif
     if (cyberData)
     {
         GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
@@ -628,7 +652,12 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int goldWidth, goldHeight, goldChannels;
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    unsigned char *goldData = stbi_load("src\\models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+#else
     unsigned char *goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+#endif
     if (goldData)
     {
         GLenum format = (goldChannels == 4) ? GL_RGBA : GL_RGB;
@@ -652,7 +681,11 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int tireWidth, tireHeight, tireChannels;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    unsigned char *tireData = stbi_load("src\\models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+#else
     unsigned char *tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+#endif
     if (tireData)
     {
         GLenum format = (tireChannels == 4) ? GL_RGBA : GL_RGB;
@@ -677,7 +710,12 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int bbWidth, bbHeight, bbChannels;
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     unsigned char *bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+#else
+    unsigned char *bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+#endif
+
     if (bbData)
     {
         GLenum format = (bbChannels == 4) ? GL_RGBA : GL_RGB;
@@ -689,8 +727,6 @@ int main(int argc, char *argv[])
         std::cout << "Failed to load bumperborderBake.png\n";
     }
     stbi_image_free(bbData);
-
-    ShadowMapFBO shadowMapFBO;
 
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
@@ -754,6 +790,9 @@ int main(int argc, char *argv[])
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // Reset depth function
+
+        // Shadows
+        ShadowPass();
 
         ////////// Draw geometry
         // Draw Rectangle
