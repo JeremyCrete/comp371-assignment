@@ -5,8 +5,25 @@
 class ShadowMapFBO
 {
 public:
-    ShadowMapFBO();
-    ~ShadowMapFBO();
+    ShadowMapFBO()
+    {
+        m_id = 0;
+        m_shadowMap = 0;
+        m_width = 0;  // Default width
+        m_height = 0; // Default height
+    }
+
+    ~ShadowMapFBO()
+    {
+        if (m_shadowMap)
+        {
+            glDeleteTextures(1, &m_shadowMap);
+        }
+        if (m_id)
+        {
+            glDeleteFramebuffers(1, &m_id);
+        }
+    }
 
     bool init(unsigned int width, unsigned int height);
     void bindForWriting();

@@ -690,6 +690,8 @@ int main(int argc, char *argv[])
     }
     stbi_image_free(bbData);
 
+    ShadowMapFBO shadowMapFBO;
+
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
     {
