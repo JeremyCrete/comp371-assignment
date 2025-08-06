@@ -35,7 +35,7 @@ int currentTextureMode = 1;
 
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
-    glm::vec3(1.0f, 10.0f, 1.0f),
+    glm::vec3(14.0f, 10.0f, 0.0f),
 
 };
 
@@ -773,13 +773,16 @@ int main(int argc, char *argv[])
 
         // Set light properties
         const float radius = 0.08f;
-        for (unsigned int i = 0; i < 4; i++)
-        {
-            float lightX = sin(glfwGetTime()) * radius;
-            float lightZ = cos(glfwGetTime()) * radius;
-            pointLightPositions[i].x += lightX;
-            pointLightPositions[i].z += lightZ;
-        }
+
+        // LIGHT MOVEMENT
+
+        // for (unsigned int i = 0; i < 4; i++)
+        // {
+        //     float lightX = sin(glfwGetTime()) * radius;
+        //     float lightZ = cos(glfwGetTime()) * radius;
+        //     pointLightPositions[i].x += lightX;
+        //     pointLightPositions[i].z += lightZ;
+        // }
 
         // Set light position
         glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
