@@ -1,5 +1,5 @@
-// This file is part of the Comp371 Assignment 1
-// It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering
+// This file is part of the Comp371 Assignment 2
+// It demonstrates the use of OpenGL with GLEW and GLFW to create a simple rendering and the use of assimp to load obj files 
 // Jeremy Crete <40246576>
 // Colton Leblond <40210640>
 // Charles Eimer <26747310>
@@ -924,6 +924,12 @@ int main(int argc, char *argv[])
             glDrawArrays(GL_TRIANGLES, 0, 36);
             glBindVertexArray(0);
         }
+
+        {
+    
+    std::string title =  std::string("Wrap: ") + (currentTextureMode == 1 ? "Onyx" : "Gold") + " | Mode: " + (autoSpinMode ? "Orbit" : "Manual") + " | F=Orbit 1/2=Wrap  Shift=Fast  Esc=Quit";
+    glfwSetWindowTitle(window, title.c_str());
+}
 
         glfwSwapBuffers(window);
         glfwPollEvents();
