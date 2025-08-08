@@ -33,6 +33,28 @@
 glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
 int currentTextureMode = 1;
 
+bool autoSpinMode = false;
+float spinAngle = 0.0f;
+float spinSpeed = 30.0f;
+
+
+// f = autospin around model
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS){
+        autoSpinMode = !autoSpinMode;
+        if (autoSpinMode) spinAngle = 0.0f;
+    }
+    
+   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        currentTextureMode = 1; // Onyx
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        currentTextureMode = 2; // Gold
+}
+
+
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
     glm::vec3(1.0f, 10.0f, 1.0f),
@@ -481,6 +503,8 @@ int main(int argc, char *argv[])
     }
     glfwMakeContextCurrent(window);
 
+    glfwSetKeyCallback(window, keyCallback);
+
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED); // removes the mouse cursor from the window
 
     glfwGetCursorPos(window, &lastMousePosX, &lastMousePosY);
@@ -704,29 +728,45 @@ int main(int argc, char *argv[])
         double mousePosX, mousePosY;
         glfwGetCursorPos(window, &mousePosX, &mousePosY);
 
-        // Calculate mouse motion dx and dy
-        double dx = mousePosX - lastMousePosX;
-        double dy = mousePosY - lastMousePosY;
+        //used for both the normal cam and the spin around obj
+        if (!autoSpinMode) {
 
-        lastMousePosX = mousePosX;
-        lastMousePosY = mousePosY;
+            double dx = mousePosX - lastMousePosX;
+            double dy = mousePosY - lastMousePosY;
+            lastMousePosX = mousePosX;
+            lastMousePosY = mousePosY;
 
-        // Update camera horizontal and vertical angle and added a constant speed for camera rotation
-        const float cameraAngularSpeed = 8.0f;
-        cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
-        cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
+            const float cameraAngularSpeed = 8.0f;
+            cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
+            cameraVerticalAngle   -= dy * cameraAngularSpeed * dt;
+            cameraVerticalAngle = std::clamp(cameraVerticalAngle, -85.0f, 85.0f);
 
-        // clamp vertical angle to avod flipping of the cam
-        cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
+            float phi   = glm::radians(cameraVerticalAngle);
+            float theta = glm::radians(cameraHorizontalAngle);
+            cameraLookAt = glm::vec3(cosf(phi)*cosf(theta), sinf(phi), -cosf(phi)*sinf(theta));
 
-        float phi = glm::radians(cameraVerticalAngle);
-        float theta = glm::radians(cameraHorizontalAngle);
+            processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
+        }
 
-        // Update camera lookAt vector based on angles
-        cameraLookAt = glm::vec3(cosf(phi) * cosf(theta), sinf(phi), -cosf(phi) * sinf(theta));
+        else {
 
-        // Process input
-        processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
+            float actualSpinSpeed = spinSpeed;
+            if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)==GLFW_PRESS) {
+                actualSpinSpeed *= 3.0f;
+            }
+
+
+            spinAngle += actualSpinSpeed * dt;
+
+            float rad = glm::radians(spinAngle);
+            glm::vec3 center(0.0f);
+            float radius = 20.0f;
+            float height = 15.0f;
+            cameraPosition = center + glm::vec3(radius * cos(rad), height, radius * sin(rad));
+            cameraLookAt   = glm::normalize(center - cameraPosition);
+        }
+
 
         // View Matrix
         glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
