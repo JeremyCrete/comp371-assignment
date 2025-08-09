@@ -37,6 +37,12 @@ bool autoSpinMode = false;
 float spinAngle = 0.0f;
 float spinSpeed = 30.0f;
 
+float carSpinAngle   = 0.0f;
+float carSpinSpeed   = 20.0f; //car
+
+float wheelSpinAngle = 0.0f;
+float wheelSpinSpeed = 240.0f; //wheels
+
 
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -725,6 +731,9 @@ int main(int argc, char *argv[])
         float dt = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
 
+        carSpinAngle   += carSpinSpeed   * dt;
+        wheelSpinAngle += wheelSpinSpeed * dt;
+
         double mousePosX, mousePosY;
         glfwGetCursorPos(window, &mousePosX, &mousePosY);
 
@@ -838,40 +847,75 @@ int main(int argc, char *argv[])
         glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
         glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
 
-        glm::mat4 cubeModel = glm::mat4(1.0f);
-        cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f));
-        cubeModel = glm::scale(cubeModel, glm::vec3(4.0f));
 
-        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &cubeModel[0][0]);
+        glm::mat4 carWorld = glm::mat4(1.0f);
+        carWorld = glm::translate(carWorld, glm::vec3(0.0f, -1.0f, 0.0f));
+        carWorld = glm::rotate(carWorld, glm::radians(carSpinAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        carWorld = glm::scale(carWorld, glm::vec3(4.0f)); 
+
+
+        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &carWorld[0][0]);
 
         GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
-        for (const Mesh &mesh : cubeMeshes)
-        {
-            glActiveTexture(GL_TEXTURE0);
-
-            if (mesh.name.find("Tire") != std::string::npos || mesh.name.find("Protector") != std::string::npos || mesh.name.find("Rims") != std::string::npos)
-            {
-                glBindTexture(GL_TEXTURE_2D, tireTexture);
-            }
-            else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border")
-            {
-                glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
-            }
-
-            else if (currentTextureMode == 1)
-            {
-                glBindTexture(GL_TEXTURE_2D, cyberTexture);
-            }
-            else if (currentTextureMode == 2)
-            {
-                glBindTexture(GL_TEXTURE_2D, goldTexture);
-            }
-
-            glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
-            mesh.Draw();
+        //finds center point of mesh so we can rotate it 
+        auto meshCenter = [](const Mesh& m) -> glm::vec3 {
+        if (m.vertices.empty()) return glm::vec3(0.0f);
+        glm::vec3 min = m.vertices[0].Position;
+        glm::vec3 max = m.vertices[0].Position;
+        for (size_t i = 1; i < m.vertices.size(); ++i) {
+            const glm::vec3 p = m.vertices[i].Position;
+            if (p.x < min.x) min.x = p.x; if (p.y < min.y) min.y = p.y; if (p.z < min.z) min.z = p.z;
+            if (p.x > max.x) max.x = p.x; if (p.y > max.y) max.y = p.y; if (p.z > max.z) max.z = p.z;
         }
+        return (min + max) * 0.5f;
+    };
+
+    for (const Mesh &mesh : cubeMeshes){
+
+        glActiveTexture(GL_TEXTURE0);
+
+
+        if (mesh.name.find("Tire") != std::string::npos ||
+            mesh.name.find("Protector") != std::string::npos ||
+            mesh.name.find("Rims") != std::string::npos)
+        {
+            glBindTexture(GL_TEXTURE_2D, tireTexture);
+        }
+        else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001"   || mesh.name == "Border") {
+            glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+        }
+        else if (currentTextureMode == 1){
+            glBindTexture(GL_TEXTURE_2D, cyberTexture);
+        }
+        else{    
+            glBindTexture(GL_TEXTURE_2D, goldTexture);
+        }
+        glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+
+
+        glm::mat4 worldForThisMesh = carWorld;
+
+        // uses mesh names to find wheels and spin them on axis 
+        bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
+
+        if (isWheel) {
+            glm::vec3 pivot = meshCenter(mesh);               
+            glm::vec3 axleAxis = glm::vec3(1.0f, 0.0f, 0.0f); 
+
+            glm::mat4 wheelLocal(1.0f);
+            wheelLocal = glm::translate(wheelLocal, pivot);
+            wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
+            wheelLocal = glm::translate(wheelLocal, -pivot);
+
+            worldForThisMesh = carWorld * wheelLocal;       
+        }
+
+        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
+        mesh.Draw();
+    }
+
 
         // Rebind stone texture for floor
         glUseProgram(shaderProgram); // Use floor shader again
