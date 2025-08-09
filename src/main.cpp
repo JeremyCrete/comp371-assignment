@@ -584,7 +584,7 @@ int main(int argc, char *argv[])
 
     // Shadow Frame Buffer Object
     ShadowMapFBO m_shadowMapFBO;
-    m_shadowMapFBO.init(WIDTH, HEIGHT);
+    // m_shadowMapFBO.init(WIDTH, HEIGHT);
 
     glm::vec3 cameraPosition(0.0f, 8.0f, 15.0f);
     glm::vec3 cameraLookAt(0.0f, 0.0f, 0.0f);

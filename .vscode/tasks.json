@@ -5,18 +5,14 @@
       "label": "C/C++: g++ build active file",
       "command": "/usr/bin/g++",
       "args": [
-        "-fdiagnostics-color=always",
-        "-g",
-        "${file}",
         "-std=c++11",
+        "${workspaceFolder}/src/main.cpp",
         "-o",
         "${fileDirname}/${fileBasenameNoExtension}",
         "-I",
         "/opt/homebrew/include",
         "-L",
         "/opt/homebrew/lib",
-        "-L",
-        "/opt/homebrew/lib", 
         "-lassimp",
         "-lglfw",
         "-lGLEW",
@@ -27,7 +23,6 @@
       "options": {
         "cwd": "${fileDirname}"
       },
-      "problemMatcher": ["$gcc"],
       "group": {
         "kind": "build",
         "isDefault": true
