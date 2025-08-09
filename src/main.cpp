@@ -861,7 +861,7 @@ int main(int argc, char *argv[])
         {
             glUseProgram(shadowMapProgram);
             glEnable(GL_DEPTH_TEST);
-            glViewport(0, 0, WIDTH, HEIGHT);
+            // glViewport(0, 0, WIDTH, HEIGHT);
 
             glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO.m_fbo);
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -869,7 +869,6 @@ int main(int argc, char *argv[])
             glBindVertexArray(groundVAO);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glViewport(0, 0, WIDTH, HEIGHT);
         }
 
         // Render pass
