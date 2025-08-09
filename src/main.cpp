@@ -22,17 +22,20 @@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #include <glm.hpp>
 #include <gtc/matrix_transform.hpp>
+#include <gtc/type_ptr.hpp>
 #else
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #endif
 
 #include "ModelLoader.h"
-#include "shadowMapFBO.h"
+#include "ShadowMapFBO.h"
+
 
 glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
 int currentTextureMode = 1;
-ShadowMapFBO m_shadowMapFBO;
+
 
 // positions of the point lights
 glm::vec3 pointLightPositions[] = {
@@ -43,13 +46,12 @@ glm::vec3 pointLightPositions[] = {
 static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
 
-// used to import model using assimp
-void ShadowPass()
-{
-
-    // 1. Render depth of scene to texture (from light's perspective)
-    // - Get light projection/view matrix.
-    // - Render scene
+template <class T>
+void SetUniform1Value(GLuint shader_id, const char* uniform_name,
+    T uniform_value) {
+    glUseProgram(shader_id);
+    glUniform1i(glGetUniformLocation(shader_id, uniform_name), uniform_value);
+    glUseProgram(0);
 }
 
 void Mesh::setupMesh()
@@ -66,11 +68,11 @@ void Mesh::setupMesh()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, TexCoords));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
 
     glBindVertexArray(0);
 }
@@ -82,7 +84,7 @@ void Mesh::Draw() const
     glBindVertexArray(0);
 }
 
-void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
+void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -97,17 +99,17 @@ void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
             mesh->mVertices[i].y,
             mesh->mVertices[i].z);
         vertex.Normal = mesh->HasNormals()
-                            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
-                            : glm::vec3(0.0f);
+            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
+            : glm::vec3(0.0f);
         vertex.TexCoords = mesh->mTextureCoords[0]
-                               ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
-                               : glm::vec2(0.0f);
+            ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+            : glm::vec2(0.0f);
         vertices.push_back(vertex);
     }
 
     for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
     {
-        const aiFace &face = mesh->mFaces[i];
+        const aiFace& face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; ++j)
             indices.push_back(face.mIndices[j]);
     }
@@ -118,11 +120,11 @@ void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
     meshes.push_back(std::move(newMesh));
 }
 
-void processNode(aiNode *node, const aiScene *scene, std::vector<Mesh> &meshes)
+void processNode(aiNode* node, const aiScene* scene, std::vector<Mesh>& meshes)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; ++i)
     {
-        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         processMesh(mesh, meshes);
     }
 
@@ -132,15 +134,15 @@ void processNode(aiNode *node, const aiScene *scene, std::vector<Mesh> &meshes)
     }
 }
 
-std::vector<Mesh> loadModel(const std::string &path)
+std::vector<Mesh> loadModel(const std::string& path)
 {
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(
+    const aiScene* scene = importer.ReadFile(
         path,
         aiProcess_Triangulate |
-            aiProcess_GenSmoothNormals |
-            aiProcess_FlipUVs |
-            aiProcess_JoinIdenticalVertices);
+        aiProcess_GenSmoothNormals |
+        aiProcess_FlipUVs |
+        aiProcess_JoinIdenticalVertices);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -153,7 +155,7 @@ std::vector<Mesh> loadModel(const std::string &path)
     return meshes;
 }
 
-std::string loadShaderSource(const std::string &filepath)
+std::string loadShaderSource(const std::string& filepath)
 {
     std::ifstream file(filepath);
     std::stringstream buffer;
@@ -169,54 +171,62 @@ std::string loadShaderSource(const std::string &filepath)
     return buffer.str();
 }
 
+// shader variable setters
+void SetUniformMat4(GLuint shader_id, const char* uniform_name,
+    glm::mat4 uniform_value) {
+    glUseProgram(shader_id);
+    glUniformMatrix4fv(glGetUniformLocation(shader_id, uniform_name), 1, GL_FALSE,
+        &uniform_value[0][0]);
+}
+
 #if defined(WIN32) || defined(_WIN32)
 std::string vertexShaderStr = loadShaderSource("src\\Shaders\\shader.vert");
-const char *vertexShaderSource = vertexShaderStr.c_str();
+const char* vertexShaderSource = vertexShaderStr.c_str();
 
 std::string fragmentShaderStr = loadShaderSource("src\\Shaders\\shader.frag");
-const char *fragmentShaderSource = fragmentShaderStr.c_str();
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
 
 std::string skyboxVertexShaderStr = loadShaderSource("src\\Shaders\\skybox.vert");
-const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
 std::string skyboxFragmentShaderStr = loadShaderSource("src\\Shaders\\skybox.frag");
-const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
 std::string vertexShader2Str = loadShaderSource("src\\Shaders\\shader2.vert");
-const char *vertexShader2Source = vertexShader2Str.c_str();
+const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("src\\Shaders\\shader2.frag");
-const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 
-std::string shadowVertexShaderStr = loadShaderSource("Shaders\\shadowMap.vert");
-const char *shadowVertexShaderSource = vertexShader2Str.c_str();
+std::string shadowVertexShaderStr = loadShaderSource("src\\Shaders\\shadowMap.vert");
+const char* shadowVertexShaderSource = vertexShader2Str.c_str();
 
-std::string shadowFragmentShaderStr = loadShaderSource("Shaders\\shadowMap.frag");
-const char *shadowFragmentShaderSource = fragment2ShaderStr.c_str();
+std::string shadowFragmentShaderStr = loadShaderSource("src\\Shaders\\shadowMap.frag");
+const char* shadowFragmentShaderSource = fragment2ShaderStr.c_str();
 #else
 std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
-const char *vertexShaderSource = vertexShaderStr.c_str();
+const char* vertexShaderSource = vertexShaderStr.c_str();
 
 std::string fragmentShaderStr = loadShaderSource("Shaders/shader.frag");
-const char *fragmentShaderSource = fragmentShaderStr.c_str();
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
 
 std::string skyboxVertexShaderStr = loadShaderSource("Shaders/skybox.vert");
-const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
 std::string skyboxFragmentShaderStr = loadShaderSource("Shaders/skybox.frag");
-const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
 std::string vertexShader2Str = loadShaderSource("Shaders/shader2.vert");
-const char *vertexShader2Source = vertexShader2Str.c_str();
+const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
-const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 
 std::string shadowVertexShaderStr = loadShaderSource("Shaders/shadowMap.vert");
-const char *shadowVertexShaderSource = vertexShader2Str.c_str();
+const char* shadowVertexShaderSource = vertexShader2Str.c_str();
 
 std::string shadowFragmentShaderStr = loadShaderSource("Shaders/shadowMap.frag");
-const char *shadowFragmentShaderSource = fragment2ShaderStr.c_str();
+const char* shadowFragmentShaderSource = fragment2ShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
@@ -287,7 +297,7 @@ float skyboxVertices[] = {
     1.0f, -1.0f, -1.0f,
     1.0f, -1.0f, -1.0f,
     -1.0f, -1.0f, 1.0f,
-    1.0f, -1.0f, 1.0f};
+    1.0f, -1.0f, 1.0f };
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 std::vector<std::string> facesCubemap = {
@@ -309,7 +319,7 @@ std::vector<std::string> facesCubemap = {
 };
 #endif
 
-int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
+int compileAndLinkShaders(const char* vertexSource, const char* fragmentSource)
 {
     // compile and link shader program
     // return shader program id
@@ -329,7 +339,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // fragment shader
@@ -344,7 +354,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // link shaders
@@ -359,7 +369,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     glDeleteShader(vertexShader);
@@ -390,7 +400,28 @@ int compileSkyboxShaders()
     return shaderProgram;
 }
 
-int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, int arraySize)
+int compileShadowShaders()
+{
+
+    int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &shadowVertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+
+    int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &shadowFragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+
+    int shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    return shaderProgram;
+}
+
+int createTexturedVertexArrayObject(const TexturedColoredVertex* vertexArray, int arraySize)
 {
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
@@ -401,19 +432,19 @@ int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, in
     glBufferData(GL_ARRAY_BUFFER, arraySize, vertexArray, GL_STATIC_DRAW);
 
     // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, position));
     glEnableVertexAttribArray(0);
 
     // Color
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, color));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, color));
     glEnableVertexAttribArray(1);
 
     // Texture coordinates
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, uv));
     glEnableVertexAttribArray(2);
 
     // Normals
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, normal));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, normal));
     glEnableVertexAttribArray(3);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -431,7 +462,7 @@ unsigned int createSkyboxVAO()
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return skyboxVAO;
 }
 
@@ -444,11 +475,11 @@ unsigned int createLightVAO()
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return lightVAO;
 }
 
-void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const glm::vec3 &cameraLookAt, const glm::vec3 &cameraUp)
+void processInput(GLFWwindow* window, float dt, glm::vec3& cameraPosition, const glm::vec3& cameraLookAt, const glm::vec3& cameraUp)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -474,7 +505,7 @@ void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const
         currentTextureMode = 2; // Gold
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
     double lastMousePosX, lastMousePosY;
@@ -492,7 +523,7 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -514,17 +545,27 @@ int main(int argc, char *argv[])
         return -1;
     }
     glEnable(GL_DEPTH_TEST);
-
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    std::string modelVertSrc = loadShaderSource("src\\Shaders\\model.vert");
+    std::string modelFragSrc = loadShaderSource("src\\Shaders\\model.frag");
+#else 
     std::string modelVertSrc = loadShaderSource("Shaders/model.vert");
     std::string modelFragSrc = loadShaderSource("Shaders/model.frag");
-    const char *modelVert = modelVertSrc.c_str();
-    const char *modelFrag = modelFragSrc.c_str();
-    int modelShaderProgram = compileAndLinkShaders(modelVert, modelFrag);
+#endif
 
+    const char* modelVert = modelVertSrc.c_str();
+    const char* modelFrag = modelFragSrc.c_str();
+
+    int modelShaderProgram = compileAndLinkShaders(modelVert, modelFrag);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    std::vector<Mesh> cubeMeshes = loadModel("src\\models\\cyberCar.obj");
+#else 
     std::vector<Mesh> cubeMeshes = loadModel("Models/cyberCar.obj");
+#endif
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
 
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders(vertexShaderSource, fragmentShaderSource);
@@ -541,6 +582,11 @@ int main(int argc, char *argv[])
     float angle = 0;
     float rotationSpeed = 180.0f; // 180 degrees per second
     float lastFrameTime = glfwGetTime();
+
+	// Shadow Frame Buffer Object
+    ShadowMapFBO m_shadowMapFBO;
+    m_shadowMapFBO.init(WIDTH, HEIGHT);
+
 
     glm::vec3 cameraPosition(0.0f, 8.0f, 15.0f);
     glm::vec3 cameraLookAt(0.0f, 0.0f, 0.0f);
@@ -561,7 +607,7 @@ int main(int argc, char *argv[])
     for (unsigned int i = 0; i < 6; i++)
     {
         int width, height, nrChannels;
-        unsigned char *data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+        unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
         if (data)
         {
             GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
@@ -596,9 +642,9 @@ int main(int argc, char *argv[])
     int texWidth, texHeight, nrChannels;
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *data = stbi_load("src\\Textures\\stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char* data = stbi_load("src\\Textures\\stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
 #else
-    unsigned char *data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char* data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
 #endif //
 
     if (data)
@@ -625,9 +671,9 @@ int main(int argc, char *argv[])
 
     int cyberWidth, cyberHeight, cyberChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *cyberData = stbi_load("src\\models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+    unsigned char* cyberData = stbi_load("src\\models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
 #else
-    unsigned char *cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+    unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
 #endif
     if (cyberData)
     {
@@ -654,9 +700,9 @@ int main(int argc, char *argv[])
     int goldWidth, goldHeight, goldChannels;
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *goldData = stbi_load("src\\models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+    unsigned char* goldData = stbi_load("src\\models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
 #else
-    unsigned char *goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+    unsigned char* goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
 #endif
     if (goldData)
     {
@@ -682,9 +728,9 @@ int main(int argc, char *argv[])
 
     int tireWidth, tireHeight, tireChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *tireData = stbi_load("src\\models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+    unsigned char* tireData = stbi_load("src\\models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
 #else
-    unsigned char *tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+    unsigned char* tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
 #endif
     if (tireData)
     {
@@ -697,6 +743,7 @@ int main(int argc, char *argv[])
     {
         std::cerr << "Failed to load tireBake.png" << std::endl;
     }
+
     stbi_image_free(tireData);
 
     // loads the bumper and arch texture
@@ -708,12 +755,13 @@ int main(int argc, char *argv[])
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
 
     int bbWidth, bbHeight, bbChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+    unsigned char* bbData = stbi_load("src\\models\\bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
 #else
-    unsigned char *bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+    unsigned char* bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
 #endif
 
     if (bbData)
@@ -727,6 +775,14 @@ int main(int argc, char *argv[])
         std::cout << "Failed to load bumperborderBake.png\n";
     }
     stbi_image_free(bbData);
+
+	// Set up point light positions
+	glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+	glm::mat4 lightView = glm::lookAt(20.0f * pointLightPositions[0], glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 lightProjection = orthgonalProjection * lightView;
+	GLuint shadowMapProgram = compileShadowShaders();
+    
+
 
     // Entering Main Loop
     while (!glfwWindowShouldClose(window))
@@ -767,91 +823,98 @@ int main(int argc, char *argv[])
         processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
 
         // View Matrix
-        glm::mat4 viewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
+        glm::mat4 cameraViewMatrix = glm::lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
 
         // Projection Matrix
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
 
+        // World 
+        glm::mat4 worldMatrix = glm::mat4(1.0f);
+
+        //float lightAngleOuter = glm::radians(30.0f);
+        //float lightAngleInner = glm::radians(20.0f);
+        //// Set light cutoff angles on scene shader
+        //SetUniform1Value(shaderProgram, "light_cutoff_inner", cos(lightAngleInner));
+        //SetUniform1Value(shaderProgram, "light_cutoff_outer", cos(lightAngleOuter));
+
         //////// Skybox
         // Draw Skybox
-        glDepthFunc(GL_LEQUAL);
-        glUseProgram(skyboxShaderProgram);
+        {
+            glDepthFunc(GL_LEQUAL);
+            glUseProgram(skyboxShaderProgram);
 
-        // View matrix Skybox
-        glm::mat4 viewMatrixSkybox = glm::mat4(glm::mat3(viewMatrix));
-        GLuint viewMatrixSkyboxLocation = glGetUniformLocation(skyboxShaderProgram, "viewMatrix");
-        glUniformMatrix4fv(viewMatrixSkyboxLocation, 1, GL_FALSE, &viewMatrixSkybox[0][0]);
+            // View matrix Skybox
+            glm::mat4 viewMatrixSkybox = glm::mat4(glm::mat3(cameraViewMatrix));
+            glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrixSkybox[0][0]);
+            glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
-        GLuint projectionMatrixSkyboxLocation = glGetUniformLocation(skyboxShaderProgram, "projectionMatrix");
-        glUniformMatrix4fv(projectionMatrixSkyboxLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
-
-        glBindVertexArray(skyboxVAO);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        glBindVertexArray(0);
-        glDepthFunc(GL_LESS); // Reset depth function
-
-        // Shadows
-        ShadowPass();
-
-        ////////// Draw geometry
-        // Draw Rectangle
-        glUseProgram(shaderProgram);
-
-        GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
-        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
-
-        GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
-        glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
-
-        glBindVertexArray(groundVAO);
-        GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
-        glm::mat4 worldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(100.0f, 1.0f, 100.0f));
-        worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
-
-        // Set light properties
-        const float radius = 0.08f;
-
-        // LIGHT MOVEMENT
-
-        // for (unsigned int i = 0; i < 4; i++)
-        // {
-        //     float lightX = sin(glfwGetTime()) * radius;
-        //     float lightZ = cos(glfwGetTime()) * radius;
-        //     pointLightPositions[i].x += lightX;
-        //     pointLightPositions[i].z += lightZ;
-        // }
+            glBindVertexArray(skyboxVAO);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+            glBindVertexArray(0);
+            glDepthFunc(GL_LESS); // Reset depth function
+        }
 
         // Set light position
         glUniform3f(glGetUniformLocation(shaderProgram, "pointLights[0].position"), pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
 
+
+        ////////// Draw Ground
+        
+        
+
+        glUniformMatrix4fv(glGetUniformLocation(shadowMapProgram, "transform_in_light_space"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+
+       /* Shadow pass */
+        {
+            glUseProgram(shadowMapProgram);
+            glEnable(GL_DEPTH_TEST);
+            glViewport(0, 0, WIDTH, HEIGHT);
+           
+            glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFBO.m_fbo);
+            glClear(GL_DEPTH_BUFFER_BIT);
+
+            glBindVertexArray(groundVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, WIDTH, HEIGHT);
+
+        }
+
+        // Render pass
+        glUseProgram(shaderProgram);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
+        GLuint ground_modelMatrix = glGetUniformLocation(shaderProgram, "worldMatrix");
+        worldMatrix = glm::translate(worldMatrix, glm::vec3(0.0f, -1.0f, 0.0f));
+        worldMatrix = glm::scale(worldMatrix, glm::vec3(100.0f, 1.0f, 100.0f));
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        glUniformMatrix4fv(ground_modelMatrix, 1, GL_FALSE, &worldMatrix[0][0]);
+
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "viewMatrix"), 1, GL_FALSE, &cameraViewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "light_proj_view_matrix"), 1, GL_FALSE, &lightProjection[0][0]);
+        glBindVertexArray(groundVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
-        glBindVertexArray(0);
+
+
 
         // draw models loaded using assimp
         glUseProgram(modelShaderProgram);
 
         // Set matrices for model shader
-        GLuint modelViewLoc = glGetUniformLocation(modelShaderProgram, "viewMatrix");
-        GLuint modelProjLoc = glGetUniformLocation(modelShaderProgram, "projectionMatrix");
-        GLuint modelWorldLoc = glGetUniformLocation(modelShaderProgram, "worldMatrix");
-
-        glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
-        glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "viewMatrix"), 1, GL_FALSE, &cameraViewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
         glm::mat4 cubeModel = glm::mat4(1.0f);
         cubeModel = glm::translate(cubeModel, glm::vec3(0.0f, 0.0f, 0.0f));
         cubeModel = glm::scale(cubeModel, glm::vec3(4.0f));
 
-        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &cubeModel[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "worldMatrix"), 1, GL_FALSE, &cubeModel[0][0]);
+        glUniform3fv(glGetUniformLocation(modelShaderProgram, "modelColor"), 1, &currentModelColor[0]);
 
-        GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
-        glUniform3fv(colorLoc, 1, &currentModelColor[0]);
-
-        for (const Mesh &mesh : cubeMeshes)
+        for (const Mesh& mesh : cubeMeshes)
         {
             glActiveTexture(GL_TEXTURE0);
 
@@ -873,34 +936,25 @@ int main(int argc, char *argv[])
                 glBindTexture(GL_TEXTURE_2D, goldTexture);
             }
 
-            glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+            glUniform1i(glGetUniformLocation(shaderProgram, "modelTexture"), 0);
             mesh.Draw();
         }
 
-        // Rebind stone texture for floor
-        glUseProgram(shaderProgram); // Use floor shader again
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
-        glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
 
         angle += rotationSpeed * dt; // increment angle each frame
         if (angle > 360.0f)
             angle -= 360.0f;
 
         // Light cube
+        glUseProgram(lightCubeProgram);
         for (unsigned int i = 0; i < 1; i++)
         {
-            glUseProgram(lightCubeProgram);
-
-            viewMatrixLocation = glGetUniformLocation(lightCubeProgram, "viewMatrix");
-            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
-
-            projectionMatrixLocation = glGetUniformLocation(lightCubeProgram, "projectionMatrix");
-            glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+            glUniformMatrix4fv(glGetUniformLocation(lightCubeProgram, "viewMatrix"), 1, GL_FALSE, &cameraViewMatrix[0][0]);
+            glUniformMatrix4fv(glGetUniformLocation(lightCubeProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
 
             glBindVertexArray(cubeVAO);
-            worldMatrixLocation = glGetUniformLocation(lightCubeProgram, "worldMatrix");
             worldMatrix = glm::mat4(1.0f);
+            ground_modelMatrix = glGetUniformLocation(lightCubeProgram, "worldMatrix");
             worldMatrix = glm::translate(worldMatrix, glm::vec3(pointLightPositions[i].x, pointLightPositions[i].y, pointLightPositions[i].z));
 
             if (i == 0)
@@ -924,7 +978,7 @@ int main(int argc, char *argv[])
             }
 
             worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f));
-            glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+            glUniformMatrix4fv(ground_modelMatrix, 1, GL_FALSE, &worldMatrix[0][0]);
             glDrawArrays(GL_TRIANGLES, 0, 36);
             glBindVertexArray(0);
         }
@@ -939,7 +993,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
