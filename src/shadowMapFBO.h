@@ -1,13 +1,15 @@
 #pragma once
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
 #include <GL/glew.h>  // Include GLEW - OpenGL Extension Wrangler
+#include <iostream>
 
 class ShadowMapFBO
 {
 public:
+    GLuint m_fbo;
     ShadowMapFBO()
     {
-        m_id = 0;
+        m_fbo = 0;
         m_shadowMap = 0;
         m_width = 0;  // Default width
         m_height = 0; // Default height
@@ -19,9 +21,9 @@ public:
         {
             glDeleteTextures(1, &m_shadowMap);
         }
-        if (m_id)
+        if (m_fbo)
         {
-            glDeleteFramebuffers(1, &m_id);
+            glDeleteFramebuffers(1, &m_fbo);
         }
     }
 
@@ -31,6 +33,5 @@ public:
 
 private:
     unsigned int m_width, m_height = 0;
-    GLuint m_id;
     GLuint m_shadowMap;
 };
