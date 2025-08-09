@@ -1,15 +1,15 @@
 #version 330 core
+layout (location = 0) in vec3 position;
 
-layout (location = 0) in vec3 Position;
-layout (location = 1) in vec2 TexCoord;
-layout (location = 2) in vec3 Normal;
-
-uniform mat4 gWVP;
-
-out vec2 TexCoordOut;
+uniform mat4 transform_in_light_space;
 
 void main()
 {
-    gl_Position = gWVP * vec4(Position, 1.0);
-    TexCoordOut = TexCoord;
+    mat4 scale_bias_matrix = mat4(vec4(0.5, 0.0, 0.0, 0.0),
+                                    vec4(0.0, 0.5, 0.0, 0.0),
+                                    vec4(0.0, 0.0, 0.5, 0.0),
+                                    vec4(0.5, 0.5, 0.5, 1.0));
+    gl_Position = 
+                    //scale_bias_matrix * // bias the depth map coordinates
+                    transform_in_light_space * vec4(position, 1.0);
 }
