@@ -9,6 +9,7 @@
 #include <sstream>
 #include <vector>
 
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
@@ -37,8 +38,8 @@ bool autoSpinMode = false;
 float spinAngle = 0.0f;
 float spinSpeed = 30.0f;
 
-float carSpinAngle   = 0.0f;
-float carSpinSpeed   = 20.0f; //car
+float carSpinAngle = 0.0f;
+float carSpinSpeed = 20.0f; //car
 
 float wheelSpinAngle = 0.0f;
 float wheelSpinSpeed = 240.0f; //wheels
@@ -48,12 +49,12 @@ glm::vec3 dirLightPos(0.0f, 30.0f, -40.0f);
 
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS){
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         autoSpinMode = !autoSpinMode;
         if (autoSpinMode) spinAngle = 0.0f;
     }
-    
-   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
@@ -85,11 +86,11 @@ void Mesh::setupMesh()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Position));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, Normal));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
     glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *)offsetof(Vertex, TexCoords));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, TexCoords));
 
     glBindVertexArray(0);
 }
@@ -101,7 +102,7 @@ void Mesh::Draw() const
     glBindVertexArray(0);
 }
 
-void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
+void processMesh(aiMesh* mesh, std::vector<Mesh>& meshes)
 {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -116,17 +117,17 @@ void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
             mesh->mVertices[i].y,
             mesh->mVertices[i].z);
         vertex.Normal = mesh->HasNormals()
-                            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
-                            : glm::vec3(0.0f);
+            ? glm::vec3(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z)
+            : glm::vec3(0.0f);
         vertex.TexCoords = mesh->mTextureCoords[0]
-                               ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
-                               : glm::vec2(0.0f);
+            ? glm::vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+            : glm::vec2(0.0f);
         vertices.push_back(vertex);
     }
 
     for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
     {
-        const aiFace &face = mesh->mFaces[i];
+        const aiFace& face = mesh->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; ++j)
             indices.push_back(face.mIndices[j]);
     }
@@ -137,11 +138,11 @@ void processMesh(aiMesh *mesh, std::vector<Mesh> &meshes)
     meshes.push_back(std::move(newMesh));
 }
 
-void processNode(aiNode *node, const aiScene *scene, std::vector<Mesh> &meshes)
+void processNode(aiNode* node, const aiScene* scene, std::vector<Mesh>& meshes)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; ++i)
     {
-        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         processMesh(mesh, meshes);
     }
 
@@ -151,15 +152,15 @@ void processNode(aiNode *node, const aiScene *scene, std::vector<Mesh> &meshes)
     }
 }
 
-std::vector<Mesh> loadModel(const std::string &path)
+std::vector<Mesh> loadModel(const std::string& path)
 {
     Assimp::Importer importer;
-    const aiScene *scene = importer.ReadFile(
+    const aiScene* scene = importer.ReadFile(
         path,
         aiProcess_Triangulate |
-            aiProcess_GenSmoothNormals |
-            aiProcess_FlipUVs |
-            aiProcess_JoinIdenticalVertices);
+        aiProcess_GenSmoothNormals |
+        aiProcess_FlipUVs |
+        aiProcess_JoinIdenticalVertices);
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
@@ -175,7 +176,7 @@ std::vector<Mesh> loadModel(const std::string &path)
 static const int WIDTH = 1200;  // Window width
 static const int HEIGHT = 1000; // Window height
 
-std::string loadShaderSource(const std::string &filepath)
+std::string loadShaderSource(const std::string& filepath)
 {
     std::ifstream file(filepath);
     std::stringstream buffer;
@@ -193,40 +194,40 @@ std::string loadShaderSource(const std::string &filepath)
 
 #if defined(WIN32) || defined(_WIN32)
 std::string vertexShaderStr = loadShaderSource("src\\Shaders\\shader.vert");
-const char *vertexShaderSource = vertexShaderStr.c_str();
+const char* vertexShaderSource = vertexShaderStr.c_str();
 
 std::string fragmentShaderStr = loadShaderSource("src\\Shaders\\shader.frag");
-const char *fragmentShaderSource = fragmentShaderStr.c_str();
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
 
 std::string skyboxVertexShaderStr = loadShaderSource("src\\Shaders\\skybox.vert");
-const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
 std::string skyboxFragmentShaderStr = loadShaderSource("src\\Shaders\\skybox.frag");
-const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
 std::string vertexShader2Str = loadShaderSource("src\\Shaders\\shader2.vert");
-const char *vertexShader2Source = vertexShader2Str.c_str();
+const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("src\\Shaders\\shader2.frag");
-const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 #else
 std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
-const char *vertexShaderSource = vertexShaderStr.c_str();
+const char* vertexShaderSource = vertexShaderStr.c_str();
 
 std::string fragmentShaderStr = loadShaderSource("Shaders/shader.frag");
-const char *fragmentShaderSource = fragmentShaderStr.c_str();
+const char* fragmentShaderSource = fragmentShaderStr.c_str();
 
 std::string skyboxVertexShaderStr = loadShaderSource("Shaders/skybox.vert");
-const char *skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
+const char* skyboxVertexShaderSource = skyboxVertexShaderStr.c_str();
 
 std::string skyboxFragmentShaderStr = loadShaderSource("Shaders/skybox.frag");
-const char *skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
+const char* skyboxFragmentShaderSource = skyboxFragmentShaderStr.c_str();
 
 std::string vertexShader2Str = loadShaderSource("Shaders/shader2.vert");
-const char *vertexShader2Source = vertexShader2Str.c_str();
+const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
-const char *fragment2ShaderSource = fragment2ShaderStr.c_str();
+const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
@@ -297,7 +298,7 @@ float skyboxVertices[] = {
     1.0f, -1.0f, -1.0f,
     1.0f, -1.0f, -1.0f,
     -1.0f, -1.0f, 1.0f,
-    1.0f, -1.0f, 1.0f};
+    1.0f, -1.0f, 1.0f };
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 std::vector<std::string> facesCubemap = {
@@ -319,7 +320,7 @@ std::vector<std::string> facesCubemap = {
 };
 #endif
 
-int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
+int compileAndLinkShaders(const char* vertexSource, const char* fragmentSource)
 {
     // compile and link shader program
     // return shader program id
@@ -339,7 +340,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // fragment shader
@@ -354,7 +355,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     // link shaders
@@ -369,7 +370,7 @@ int compileAndLinkShaders(const char *vertexSource, const char *fragmentSource)
     {
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
-                  << infoLog << std::endl;
+            << infoLog << std::endl;
     }
 
     glDeleteShader(vertexShader);
@@ -400,7 +401,7 @@ int compileSkyboxShaders()
     return shaderProgram;
 }
 
-int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, int arraySize)
+int createTexturedVertexArrayObject(const TexturedColoredVertex* vertexArray, int arraySize)
 {
     GLuint vao, vbo;
     glGenVertexArrays(1, &vao);
@@ -411,19 +412,19 @@ int createTexturedVertexArrayObject(const TexturedColoredVertex *vertexArray, in
     glBufferData(GL_ARRAY_BUFFER, arraySize, vertexArray, GL_STATIC_DRAW);
 
     // Position
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, position));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, position));
     glEnableVertexAttribArray(0);
 
     // Color
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, color));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, color));
     glEnableVertexAttribArray(1);
 
     // Texture coordinates
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, uv));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, uv));
     glEnableVertexAttribArray(2);
 
     // Normals
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void *)offsetof(TexturedColoredVertex, normal));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(TexturedColoredVertex), (void*)offsetof(TexturedColoredVertex, normal));
     glEnableVertexAttribArray(3);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -441,7 +442,7 @@ unsigned int createSkyboxVAO()
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return skyboxVAO;
 }
 
@@ -454,11 +455,11 @@ unsigned int createLightVAO()
     glBindBuffer(GL_ARRAY_BUFFER, lightVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     return lightVAO;
 }
 
-void processInput(GLFWwindow *window, float dt, glm::vec3 &cameraPosition, const glm::vec3 &cameraLookAt, const glm::vec3 &cameraUp)
+void processInput(GLFWwindow* window, float dt, glm::vec3& cameraPosition, const glm::vec3& cameraLookAt, const glm::vec3& cameraUp)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -497,7 +498,7 @@ static glm::vec3 meshCenter(const Mesh& m) {
 }
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 
     double lastMousePosX, lastMousePosY;
@@ -514,12 +515,12 @@ int main(int argc, char *argv[])
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
-    #ifdef __APPLE__
+#ifdef __APPLE__
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-    #endif
+#endif
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Comp371 - Assigment 2", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -552,13 +553,13 @@ int main(int argc, char *argv[])
     glGenTextures(1, &depthMapTex);
     glBindTexture(GL_TEXTURE_2D, depthMapTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
-                GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
     {
-        float borderCol[] = {1.0f, 1.0f, 1.0f, 1.0f};
+        float borderCol[] = { 1.0f, 1.0f, 1.0f, 1.0f };
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderCol);
     }
 
@@ -570,25 +571,43 @@ int main(int argc, char *argv[])
 
 
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    std::string modelVertSrc = loadShaderSource("src\\Shaders\\model.vert");
+	std::string modelFragSrc = loadShaderSource("src\\Shaders\\model.frag");    
+#else
     std::string modelVertSrc = loadShaderSource("Shaders/model.vert");
     std::string modelFragSrc = loadShaderSource("Shaders/model.frag");
-    const char *modelVert = modelVertSrc.c_str();
-    const char *modelFrag = modelFragSrc.c_str();
+#endif
+    const char* modelVert = modelVertSrc.c_str();
+    const char* modelFrag = modelFragSrc.c_str();
     int modelShaderProgram = compileAndLinkShaders(modelVert, modelFrag);
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    int depthShader = compileAndLinkShaders(
+        loadShaderSource("src\\Shaders\\shadow_depth.vert").c_str(),
+        loadShaderSource("src\\Shaders\\shadow_depth.frag").c_str()
+    );
+    int floorShadowProgram = compileAndLinkShaders(
+        loadShaderSource("src\\Shaders\\floor_shadow.vert").c_str(),
+        loadShaderSource("src\\Shaders\\floor_shadow.frag").c_str()
+	);
+#else
+    int depthShader = compileAndLinkShaders(
+        loadShaderSource("Shaders/shadow_depth.vert").c_str(),
+        loadShaderSource("Shaders/shadow_depth.frag").c_str()
+    );
 
-int depthShader = compileAndLinkShaders(
-    loadShaderSource("Shaders/shadow_depth.vert").c_str(),
-    loadShaderSource("Shaders/shadow_depth.frag").c_str()
-);
+    int floorShadowProgram = compileAndLinkShaders(
+        loadShaderSource("Shaders/floor_shadow.vert").c_str(),
+        loadShaderSource("Shaders/floor_shadow.frag").c_str()
+    );
+#endif
 
-int floorShadowProgram = compileAndLinkShaders(
-    loadShaderSource("Shaders/floor_shadow.vert").c_str(),
-    loadShaderSource("Shaders/floor_shadow.frag").c_str()
-);
-
-
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	std::vector<Mesh> cubeMeshes = loadModel("src\\Models\\cyberCar.obj");
+#else
     std::vector<Mesh> cubeMeshes = loadModel("Models/cyberCar.obj");
+#endif
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -628,7 +647,7 @@ int floorShadowProgram = compileAndLinkShaders(
     for (unsigned int i = 0; i < 6; i++)
     {
         int width, height, nrChannels;
-        unsigned char *data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+        unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
         if (data)
         {
             GLenum format = (nrChannels == 3) ? GL_RGB : GL_RGBA;
@@ -663,9 +682,9 @@ int floorShadowProgram = compileAndLinkShaders(
     int texWidth, texHeight, nrChannels;
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    unsigned char *data = stbi_load("src\\Textures\\stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char* data = stbi_load("src\\Textures\\stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
 #else
-    unsigned char *data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
+    unsigned char* data = stbi_load("Textures/stone.jpg", &texWidth, &texHeight, &nrChannels, 0);
 #endif //
 
     if (data)
@@ -691,7 +710,11 @@ int floorShadowProgram = compileAndLinkShaders(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int cyberWidth, cyberHeight, cyberChannels;
-    unsigned char *cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	unsigned char* cyberData = stbi_load("src\\Models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+#else
+    unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+#endif
     if (cyberData)
     {
         GLenum format = (cyberChannels == 4) ? GL_RGBA : GL_RGB;
@@ -715,7 +738,11 @@ int floorShadowProgram = compileAndLinkShaders(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int goldWidth, goldHeight, goldChannels;
-    unsigned char *goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	unsigned char* goldData = stbi_load("src\\Models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+#else
+    unsigned char* goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+#endif
     if (goldData)
     {
         GLenum format = (goldChannels == 4) ? GL_RGBA : GL_RGB;
@@ -739,7 +766,11 @@ int floorShadowProgram = compileAndLinkShaders(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int tireWidth, tireHeight, tireChannels;
-    unsigned char *tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	unsigned char* tireData = stbi_load("src\\Models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+#else
+    unsigned char* tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+#endif
     if (tireData)
     {
         GLenum format = (tireChannels == 4) ? GL_RGBA : GL_RGB;
@@ -764,7 +795,11 @@ int floorShadowProgram = compileAndLinkShaders(
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int bbWidth, bbHeight, bbChannels;
-    unsigned char *bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+	unsigned char* bbData = stbi_load("src\\Models\\bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+#else
+    unsigned char* bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+#endif
     if (bbData)
     {
         GLenum format = (bbChannels == 4) ? GL_RGBA : GL_RGB;
@@ -788,7 +823,7 @@ int floorShadowProgram = compileAndLinkShaders(
         float dt = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
 
-        carSpinAngle   += carSpinSpeed   * dt;
+        carSpinAngle += carSpinSpeed * dt;
         wheelSpinAngle += wheelSpinSpeed * dt;
 
         double mousePosX, mousePosY;
@@ -801,15 +836,15 @@ int floorShadowProgram = compileAndLinkShaders(
             double dy = mousePosY - lastMousePosY;
             lastMousePosX = mousePosX;
             lastMousePosY = mousePosY;
-
+            
             const float cameraAngularSpeed = 8.0f;
             cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
-            cameraVerticalAngle   -= dy * cameraAngularSpeed * dt;
+            cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
             cameraVerticalAngle = std::clamp(cameraVerticalAngle, -85.0f, 85.0f);
 
-            float phi   = glm::radians(cameraVerticalAngle);
+            float phi = glm::radians(cameraVerticalAngle);
             float theta = glm::radians(cameraHorizontalAngle);
-            cameraLookAt = glm::vec3(cosf(phi)*cosf(theta), sinf(phi), -cosf(phi)*sinf(theta));
+            cameraLookAt = glm::vec3(cosf(phi) * cosf(theta), sinf(phi), -cosf(phi) * sinf(theta));
 
             processInput(window, dt, cameraPosition, cameraLookAt, cameraUp);
         }
@@ -818,7 +853,7 @@ int floorShadowProgram = compileAndLinkShaders(
 
             float actualSpinSpeed = spinSpeed;
             if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT)==GLFW_PRESS) {
+                glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
                 actualSpinSpeed *= 3.0f;
             }
 
@@ -830,7 +865,7 @@ int floorShadowProgram = compileAndLinkShaders(
             float radius = 20.0f;
             float height = 15.0f;
             cameraPosition = center + glm::vec3(radius * cos(rad), height, radius * sin(rad));
-            cameraLookAt   = glm::normalize(center - cameraPosition);
+            cameraLookAt = glm::normalize(center - cameraPosition);
         }
 
 
@@ -843,63 +878,63 @@ int floorShadowProgram = compileAndLinkShaders(
 
 
 
-    //Directional light
-    glm::vec3 lightPos = dirLightPos;
-    glm::mat4 lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
-    glm::mat4 lightView       = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0,1,0));
-    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+        //Directional light
+        glm::vec3 lightPos = dirLightPos;
+        glm::mat4 lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
+        glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-    glm::mat4 floorWorld = glm::mat4(1.0f);
-    floorWorld = glm::translate(floorWorld, glm::vec3(0.0f, -1.0f, 0.0f));
-    floorWorld = glm::scale(floorWorld, glm::vec3(100.0f, 1.0f, 100.0f));
-    floorWorld = glm::rotate(floorWorld, glm::radians(-90.0f), glm::vec3(1,0,0));
+        glm::mat4 floorWorld = glm::mat4(1.0f);
+        floorWorld = glm::translate(floorWorld, glm::vec3(0.0f, -1.0f, 0.0f));
+        floorWorld = glm::scale(floorWorld, glm::vec3(100.0f, 1.0f, 100.0f));
+        floorWorld = glm::rotate(floorWorld, glm::radians(-90.0f), glm::vec3(1, 0, 0));
 
-    glm::mat4 carWorld = glm::mat4(1.0f);
-    carWorld = glm::translate(carWorld, glm::vec3(0.0f, -1.0f, 0.0f));
-    carWorld = glm::rotate(carWorld, glm::radians(carSpinAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-    carWorld = glm::scale(carWorld, glm::vec3(4.0f));
+        glm::mat4 carWorld = glm::mat4(1.0f);
+        carWorld = glm::translate(carWorld, glm::vec3(0.0f, -1.0f, 0.0f));
+        carWorld = glm::rotate(carWorld, glm::radians(carSpinAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        carWorld = glm::scale(carWorld, glm::vec3(4.0f));
 
-    // Shadow depth pass
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glCullFace(GL_FRONT); 
+        // Shadow depth pass
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glCullFace(GL_FRONT);
 
-    glUseProgram(depthShader);
-    glUniformMatrix4fv(glGetUniformLocation(depthShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+        glUseProgram(depthShader);
+        glUniformMatrix4fv(glGetUniformLocation(depthShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
-    // floor
-    glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
-    glBindVertexArray(groundVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
+        // floor
+        glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
+        glBindVertexArray(groundVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
 
 
-    //car and wheels mesh
-    for (const Mesh &mesh : cubeMeshes) {
-        glm::mat4 worldForThisMesh = carWorld;
+        //car and wheels mesh
+        for (const Mesh& mesh : cubeMeshes) {
+            glm::mat4 worldForThisMesh = carWorld;
 
-        bool isWheel =
-            (mesh.name.find("Tire")      != std::string::npos) ||
-            (mesh.name.find("Rims")      != std::string::npos) ||
-            (mesh.name.find("Protector") != std::string::npos);
+            bool isWheel =
+                (mesh.name.find("Tire") != std::string::npos) ||
+                (mesh.name.find("Rims") != std::string::npos) ||
+                (mesh.name.find("Protector") != std::string::npos);
 
-        if (isWheel) {
-            glm::vec3 pivot = meshCenter(mesh);
-            glm::mat4 wheelLocal(1.0f);
-            wheelLocal = glm::translate(wheelLocal, pivot);
-            wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1,0,0));
-            wheelLocal = glm::translate(wheelLocal, -pivot);
-            worldForThisMesh = carWorld * wheelLocal;
+            if (isWheel) {
+                glm::vec3 pivot = meshCenter(mesh);
+                glm::mat4 wheelLocal(1.0f);
+                wheelLocal = glm::translate(wheelLocal, pivot);
+                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1, 0, 0));
+                wheelLocal = glm::translate(wheelLocal, -pivot);
+                worldForThisMesh = carWorld * wheelLocal;
+            }
+
+            glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &worldForThisMesh[0][0]);
+            mesh.Draw();
         }
 
-        glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &worldForThisMesh[0][0]);
-        mesh.Draw();
-    }
-
-    glCullFace(GL_BACK);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, WIDTH, HEIGHT); 
+        glCullFace(GL_BACK);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, WIDTH, HEIGHT);
 
 
 
@@ -925,9 +960,9 @@ int floorShadowProgram = compileAndLinkShaders(
 
         // draw fllor with shadow
         glUseProgram(floorShadowProgram);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"),       1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"),      1, GL_FALSE, &floorWorld[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
         glActiveTexture(GL_TEXTURE0);
@@ -953,7 +988,7 @@ int floorShadowProgram = compileAndLinkShaders(
 
         // pass light/shadow to model shader (same lightPos & lightSpaceMatrix you used for the floor)
         glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-        glUniform3fv(glGetUniformLocation(modelShaderProgram,  "lightPosWorld"),        1, &lightPos[0]);
+        glUniform3fv(glGetUniformLocation(modelShaderProgram, "lightPosWorld"), 1, &lightPos[0]);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMapTex);
@@ -964,7 +999,7 @@ int floorShadowProgram = compileAndLinkShaders(
         glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
 
 
-        
+
 
 
         glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &carWorld[0][0]);
@@ -973,51 +1008,51 @@ int floorShadowProgram = compileAndLinkShaders(
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
         //finds center point of mesh so we can rotate it 
-        
-
-    for (const Mesh &mesh : cubeMeshes){
-
-        glActiveTexture(GL_TEXTURE0);
 
 
-        if (mesh.name.find("Tire") != std::string::npos ||
-            mesh.name.find("Protector") != std::string::npos ||
-            mesh.name.find("Rims") != std::string::npos)
-        {
-            glBindTexture(GL_TEXTURE_2D, tireTexture);
+        for (const Mesh& mesh : cubeMeshes) {
+
+            glActiveTexture(GL_TEXTURE0);
+
+
+            if (mesh.name.find("Tire") != std::string::npos ||
+                mesh.name.find("Protector") != std::string::npos ||
+                mesh.name.find("Rims") != std::string::npos)
+            {
+                glBindTexture(GL_TEXTURE_2D, tireTexture);
+            }
+            else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border") {
+                glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+            }
+            else if (currentTextureMode == 1) {
+                glBindTexture(GL_TEXTURE_2D, cyberTexture);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, goldTexture);
+            }
+            glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
+
+
+            glm::mat4 worldForThisMesh = carWorld;
+
+            // uses mesh names to find wheels and spin them on axis 
+            bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
+
+            if (isWheel) {
+                glm::vec3 pivot = meshCenter(mesh);
+                glm::vec3 axleAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+
+                glm::mat4 wheelLocal(1.0f);
+                wheelLocal = glm::translate(wheelLocal, pivot);
+                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
+                wheelLocal = glm::translate(wheelLocal, -pivot);
+
+                worldForThisMesh = carWorld * wheelLocal;
+            }
+
+            glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
+            mesh.Draw();
         }
-        else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001"   || mesh.name == "Border") {
-            glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
-        }
-        else if (currentTextureMode == 1){
-            glBindTexture(GL_TEXTURE_2D, cyberTexture);
-        }
-        else{    
-            glBindTexture(GL_TEXTURE_2D, goldTexture);
-        }
-        glUniform1i(glGetUniformLocation(modelShaderProgram, "modelTexture"), 0);
-
-
-        glm::mat4 worldForThisMesh = carWorld;
-
-        // uses mesh names to find wheels and spin them on axis 
-        bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
-
-        if (isWheel) {
-            glm::vec3 pivot = meshCenter(mesh);               
-            glm::vec3 axleAxis = glm::vec3(1.0f, 0.0f, 0.0f); 
-
-            glm::mat4 wheelLocal(1.0f);
-            wheelLocal = glm::translate(wheelLocal, pivot);
-            wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
-            wheelLocal = glm::translate(wheelLocal, -pivot);
-
-            worldForThisMesh = carWorld * wheelLocal;       
-        }
-
-        glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
-        mesh.Draw();
-    }
 
 
         // Rebind stone texture for floor
@@ -1032,46 +1067,46 @@ int floorShadowProgram = compileAndLinkShaders(
 
         // Light cube
         // --- Light cube (shows point light position) ---
-    for (unsigned int i = 0; i < 1; i++)
-    {
-        glUseProgram(lightCubeProgram);
+        for (unsigned int i = 0; i < 1; i++)
+        {
+            glUseProgram(lightCubeProgram);
 
-        // Get uniform locations
-        GLuint viewMatrixLocation       = glGetUniformLocation(lightCubeProgram, "viewMatrix");
-        GLuint projectionMatrixLocation = glGetUniformLocation(lightCubeProgram, "projectionMatrix");
-        GLuint worldMatrixLocation      = glGetUniformLocation(lightCubeProgram, "worldMatrix");
+            // Get uniform locations
+            GLuint viewMatrixLocation = glGetUniformLocation(lightCubeProgram, "viewMatrix");
+            GLuint projectionMatrixLocation = glGetUniformLocation(lightCubeProgram, "projectionMatrix");
+            GLuint worldMatrixLocation = glGetUniformLocation(lightCubeProgram, "worldMatrix");
 
-        // Send view & projection
-        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
-        glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+            // Send view & projection
+            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+            glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
 
-        // Prepare cube VAO
-        glBindVertexArray(cubeVAO);
+            // Prepare cube VAO
+            glBindVertexArray(cubeVAO);
 
-        // Build transform for the light cube
-        glm::mat4 worldMatrix = glm::mat4(1.0f);
-        worldMatrix = glm::translate(worldMatrix, glm::vec3(
-            pointLightPositions[i].x,
-            pointLightPositions[i].y,
-            pointLightPositions[i].z
-        ));
-        worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f)); // make it smaller
+            // Build transform for the light cube
+            glm::mat4 worldMatrix = glm::mat4(1.0f);
+            worldMatrix = glm::translate(worldMatrix, glm::vec3(
+                pointLightPositions[i].x,
+                pointLightPositions[i].y,
+                pointLightPositions[i].z
+            ));
+            worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f)); // make it smaller
 
-        // Send world matrix
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+            // Send world matrix
+            glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 
-        // Draw
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+            // Draw
+            glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        glBindVertexArray(0);
-    }
+            glBindVertexArray(0);
+        }
 
 
         {
-    
-    std::string title =  std::string("Wrap: ") + (currentTextureMode == 1 ? "Onyx" : "Gold") + " | Mode: " + (autoSpinMode ? "Orbit" : "Manual") + " | F=Orbit 1/2=Wrap  Shift=Fast  Esc=Quit";
-    glfwSetWindowTitle(window, title.c_str());
-}
+
+            std::string title = std::string("Wrap: ") + (currentTextureMode == 1 ? "Onyx" : "Gold") + " | Mode: " + (autoSpinMode ? "Orbit" : "Manual") + " | F=Orbit 1/2=Wrap  Shift=Fast  Esc=Quit";
+            glfwSetWindowTitle(window, title.c_str());
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -1083,7 +1118,7 @@ int floorShadowProgram = compileAndLinkShaders(
     return 0;
 }
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
