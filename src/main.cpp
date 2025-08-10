@@ -46,6 +46,11 @@ float wheelSpinSpeed = 240.0f; //wheels
 
 glm::vec3 dirLightPos(0.0f, 30.0f, -40.0f);
 
+float dirLightAngle = 0.0f;
+float dirLightSpeed = 20.0f; // degrees per second
+float dirLightRadius = 40.0f; // match initial Z value
+float dirLightHeight = 30.0f; // match initial Y value
+
 
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -876,7 +881,13 @@ int main(int argc, char* argv[])
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
 
 
-
+        // Animate directional light position in a circle
+        dirLightAngle += dirLightSpeed * dt;
+        if (dirLightAngle > 360.0f) dirLightAngle -= 360.0f;
+        float rad = glm::radians(dirLightAngle);
+        dirLightPos.x = dirLightRadius * cos(rad);
+        dirLightPos.y = dirLightHeight;
+        dirLightPos.z = dirLightRadius * sin(rad);
 
         //Directional light
         glm::vec3 lightPos = dirLightPos;
@@ -937,8 +948,6 @@ int main(int argc, char* argv[])
         glViewport(0, 0, WIDTH, HEIGHT);
 
 
-
-
         //////// Skybox
         // Draw Skybox
         glDepthFunc(GL_LEQUAL);
@@ -997,10 +1006,6 @@ int main(int argc, char* argv[])
 
         glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
         glUniformMatrix4fv(modelProjLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
-
-
-
-
 
         glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &carWorld[0][0]);
 
@@ -1085,11 +1090,7 @@ int main(int argc, char* argv[])
 
             // Build transform for the light cube
             glm::mat4 worldMatrix = glm::mat4(1.0f);
-            worldMatrix = glm::translate(worldMatrix, glm::vec3(
-                pointLightPositions[i].x,
-                pointLightPositions[i].y,
-                pointLightPositions[i].z
-            ));
+            worldMatrix = glm::translate(worldMatrix, dirLightPos);
             worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f)); // make it smaller
 
             // Send world matrix
