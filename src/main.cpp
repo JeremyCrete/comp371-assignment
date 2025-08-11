@@ -8,6 +8,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include <numeric>
 
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -29,6 +31,7 @@
 #endif
 
 #include "ModelLoader.h"
+#include "ParticleSystem.h"
 
 
 glm::vec3 currentModelColor(0.0f, 0.0f, 0.0f); // Start with black
@@ -52,9 +55,10 @@ float dirLightRadius = 40.0f; // match initial Z value
 float dirLightHeight = 30.0f; // match initial Y value
 
 
+
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)  {
         autoSpinMode = !autoSpinMode;
         if (autoSpinMode) spinAngle = 0.0f;
     }
@@ -215,6 +219,13 @@ const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("src\\Shaders\\shader2.frag");
 const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
+
+std::string vertexParticleShaderStr = loadShaderSource("src\\Shaders\\particle.vert");
+const char* vertexParticleShaderSource = vertexParticleShaderStr.c_str();
+
+std::string fragmentParticleShaderStr = loadShaderSource("src\\Shaders\\particle.frag");
+const char* fragmentParticleShaderSource = fragmentParticleShaderStr.c_str();
+
 #else
 std::string vertexShaderStr = loadShaderSource("Shaders/shader.vert");
 const char* vertexShaderSource = vertexShaderStr.c_str();
@@ -233,6 +244,11 @@ const char* vertexShader2Source = vertexShader2Str.c_str();
 
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
 const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
+
+std::string vertexParticleShaderStr   = loadShaderSource("Shaders/particle.vert");
+const char*  vertexParticleShaderSource = vertexParticleShaderStr.c_str();
+std::string fragmentParticleShaderStr = loadShaderSource("Shaders/particle.frag");
+const char*  fragmentParticleShaderSource = fragmentParticleShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
@@ -550,6 +566,10 @@ int main(int argc, char* argv[])
     }
     glEnable(GL_DEPTH_TEST);
 
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     //shadow map
     const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
     GLuint depthMapFBO = 0, depthMapTex = 0;
@@ -623,6 +643,18 @@ int main(int argc, char* argv[])
 
     int skyboxShaderProgram = compileSkyboxShaders();
     unsigned int skyboxVAO = createSkyboxVAO();
+
+
+	//Init particle systems
+
+    std::vector<ParticleSystem*> particleSystems;
+    for (int i = 0; i < 2; ++i) {
+        auto* ps = new ParticleSystem();
+        ps->compileAndLinkShaders(vertexParticleShaderSource, fragmentParticleShaderSource);
+        ps->createQuad();
+        particleSystems.push_back(ps);
+    }
+
 
     // Compile and link shaders for the light cube
     int lightCubeProgram = compileAndLinkShaders(vertexShader2Source, fragment2ShaderSource);
@@ -828,8 +860,17 @@ int main(int argc, char* argv[])
         float dt = currentFrameTime - lastFrameTime;
         lastFrameTime = currentFrameTime;
 
-        carSpinAngle += carSpinSpeed * dt;
-        wheelSpinAngle += wheelSpinSpeed * dt;
+        const bool burnout = (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS);
+
+
+        const float CAR_SPIN_SPEED_BURNOUT   = 80.0f;   //spin speed of car when holding B
+        const float WHEEL_SPIN_SPEED_BURNOUT = 900.0f;  
+
+        if (burnout) {
+            carSpinAngle   += CAR_SPIN_SPEED_BURNOUT   * dt;
+            wheelSpinAngle += WHEEL_SPIN_SPEED_BURNOUT * dt;
+        }
+
 
         double mousePosX, mousePosY;
         glfwGetCursorPos(window, &mousePosX, &mousePosY);
@@ -879,6 +920,8 @@ int main(int argc, char* argv[])
 
         // Projection Matrix
         glm::mat4 projectionMatrix = glm::perspective(glm::radians(70.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 100.0f);
+
+
 
 
         // Animate directional light position in a circle
@@ -980,6 +1023,20 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMapTex);
         glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
+        // draw fllor with shadow
+        glUseProgram(floorShadowProgram);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture); // stone.jpg
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "diffuseTexture"), 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthMapTex);
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
 
         glBindVertexArray(groundVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -1013,7 +1070,6 @@ int main(int argc, char* argv[])
 
         //finds center point of mesh so we can rotate it 
 
-
         for (const Mesh& mesh : cubeMeshes) {
 
             glActiveTexture(GL_TEXTURE0);
@@ -1036,28 +1092,110 @@ int main(int argc, char* argv[])
             }
 			// Set material properties here
             glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
+            if (mesh.name.find("Tire") != std::string::npos ||
+                mesh.name.find("Protector") != std::string::npos ||
+                mesh.name.find("Rims") != std::string::npos)
+            {
+                glBindTexture(GL_TEXTURE_2D, tireTexture);
+            }
+            else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border") {
+                glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+            }
+            else if (currentTextureMode == 1) {
+                glBindTexture(GL_TEXTURE_2D, cyberTexture);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, goldTexture);
+            }
+			// Set material properties here
+            glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
 
 
             glm::mat4 worldForThisMesh = carWorld;
 
             // uses mesh names to find wheels and spin them on axis 
-            bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
+            bool isWheel = (mesh.name.find("Rims.001") != std::string::npos) || (mesh.name.find("Protector.001") != std::string::npos) || (mesh.name.find("Rims.002") != std::string::npos) || (mesh.name.find("Protector.002") != std::string::npos);
 
             if (isWheel) {
-                glm::vec3 pivot = meshCenter(mesh);
-                glm::vec3 axleAxis = glm::vec3(1.0f, 0.0f, 0.0f);
+                glm::vec3 pivot = meshCenter(mesh);                              // model space
+                glm::vec3 pivotWorld = glm::vec3(carWorld * glm::vec4(pivot,1)); // world space
 
                 glm::mat4 wheelLocal(1.0f);
                 wheelLocal = glm::translate(wheelLocal, pivot);
-                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
+                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1,0,0));
                 wheelLocal = glm::translate(wheelLocal, -pivot);
-
                 worldForThisMesh = carWorld * wheelLocal;
             }
 
-            glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
-            mesh.Draw();
+                glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
+                mesh.Draw();
+            }
+
+        //back wheels for smoke during burnout
+        auto isWheelMesh = [&](const std::string& n){
+            return n.find("Rims.001") != std::string::npos || n.find("Protector.001") != std::string::npos;
+        };
+
+
+        auto worldForMesh = [&](const Mesh& m) -> glm::mat4 {
+            glm::mat4 M = carWorld;
+            if (isWheelMesh(m.name)) {
+                glm::vec3 pivot = meshCenter(m);
+                glm::mat4 local(1.0f);
+                local = glm::translate(local, pivot);
+                local = glm::rotate(local, glm::radians(wheelSpinAngle), glm::vec3(1,0,0));
+                local = glm::translate(local, -pivot);
+                M = carWorld * local;
+            }
+            return M;
+        };
+
+        auto lowestPointWorld = [&](const Mesh& m) -> glm::vec3 {
+            glm::mat4 W = worldForMesh(m);
+            float yMin = FLT_MAX; glm::vec3 best(0.0f);
+            for (const Vertex& v : m.vertices) {
+                glm::vec3 pW = glm::vec3(W * glm::vec4(v.Position,1));
+                if (pW.y < yMin) { yMin = pW.y; best = pW; }
+            }
+            return best;
+        };
+
+        glm::vec3 carCenter = glm::vec3(carWorld * glm::vec4(0,0,0,1));
+        glm::vec3 rightDir  = glm::normalize(glm::mat3(carWorld) * glm::vec3(1,0,0));
+        glm::vec3 fwd       = glm::normalize(glm::mat3(carWorld) * glm::vec3(0,0,1)); 
+
+        struct SidePick { bool has=false; glm::vec3 rear; float tRear=FLT_MAX; };
+        SidePick leftPick, rightPick;
+
+        // Scan for wheel Mesh using the mesh names of the obj model
+        for (const Mesh& m : cubeMeshes) {
+            if (!isWheelMesh(m.name)) continue;
+
+
+            glm::vec3 pivotW = glm::vec3(worldForMesh(m) * glm::vec4(meshCenter(m),1));
+            glm::vec3 rel = pivotW - carCenter;
+
+            auto& S = (glm::dot(rel, rightDir) >= 0.f) ? rightPick : leftPick;
+            float t = glm::dot(rel, fwd);           
+            if (t < S.tRear) {
+                S.tRear = t;
+                S.rear  = lowestPointWorld(m);      //contact point for the particles emissions
+                S.has   = true;
+            }
         }
+
+        std::vector<glm::vec3> emitPos;
+        if (leftPick.has)  emitPos.push_back(leftPick.rear);
+        if (rightPick.has) emitPos.push_back(rightPick.rear);
+
+
+        for (int i = 0; i < (int)particleSystems.size(); ++i) {
+            if (burnout && i < (int)emitPos.size())
+                particleSystems[i]->emitParticles(dt, emitPos[i]);
+            particleSystems[i]->update(dt);
+            particleSystems[i]->render(viewMatrix, projectionMatrix);
+        }
+
 
         // Rebind stone texture for floor
         glUseProgram(shaderProgram); // Use floor shader again
