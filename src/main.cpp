@@ -11,6 +11,7 @@
 
 
 
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define GLEW_STATIC 1 // This allows linking with Static Library on Windows, without DLL
@@ -53,10 +54,17 @@ float dirLightSpeed = 20.0f; // degrees per second
 float dirLightRadius = 40.0f; // match initial Z value
 float dirLightHeight = 30.0f; // match initial Y value
 
+glm::vec3 dirLightPos(0.0f, 30.0f, -40.0f);
+
+float dirLightAngle = 0.0f;
+float dirLightSpeed = 20.0f; // degrees per second
+float dirLightRadius = 40.0f; // match initial Z value
+float dirLightHeight = 30.0f; // match initial Y value
+
 
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)  {
         autoSpinMode = !autoSpinMode;
         if (autoSpinMode) spinAngle = 0.0f;
     }
@@ -1004,6 +1012,20 @@ int main(int argc, char* argv[])
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMapTex);
         glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
+        // draw fllor with shadow
+        glUseProgram(floorShadowProgram);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture); // stone.jpg
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "diffuseTexture"), 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthMapTex);
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
 
         glBindVertexArray(groundVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -1061,10 +1083,29 @@ int main(int argc, char* argv[])
             }
 			// Set material properties here
             glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
+            if (mesh.name.find("Tire") != std::string::npos ||
+                mesh.name.find("Protector") != std::string::npos ||
+                mesh.name.find("Rims") != std::string::npos)
+            {
+                glBindTexture(GL_TEXTURE_2D, tireTexture);
+            }
+            else if (mesh.name == "BackBumper" || mesh.name == "Arch" || mesh.name == "Arch.001" || mesh.name == "Border") {
+                glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
+            }
+            else if (currentTextureMode == 1) {
+                glBindTexture(GL_TEXTURE_2D, cyberTexture);
+            }
+            else {
+                glBindTexture(GL_TEXTURE_2D, goldTexture);
+            }
+			// Set material properties here
+            glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
 
 
             glm::mat4 worldForThisMesh = carWorld;
 
+            // uses mesh names to find wheels and spin them on axis 
+            bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
             // uses mesh names to find wheels and spin them on axis 
             bool isWheel = (mesh.name.find("Tire") != std::string::npos) || (mesh.name.find("Rims") != std::string::npos) || (mesh.name.find("Protector") != std::string::npos);
 
@@ -1073,21 +1114,20 @@ int main(int argc, char* argv[])
                 glm::vec3 axleAxis = glm::vec3(1.0f, 0.0f, 0.0f);
 				wheelPositions.push_back(pivot);
 
-                glm::mat4 wheelLocal(1.0f);
-                wheelLocal = glm::translate(wheelLocal, pivot);
+                    glm::mat4 wheelLocal(1.0f);
+                    wheelLocal = glm::translate(wheelLocal, pivot);
 
-                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
-                wheelLocal = glm::translate(wheelLocal, -pivot);
+                    wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), axleAxis);
+                    wheelLocal = glm::translate(wheelLocal, -pivot);
 
                 worldForThisMesh = carWorld * wheelLocal;
 
                 
             }
 
-            glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
-            mesh.Draw();
-        }
-
+                glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
+                mesh.Draw();
+            }
         for (int i = 0; i < wheelPositions.size(); i++)
         {
           
