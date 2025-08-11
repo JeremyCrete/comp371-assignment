@@ -6,11 +6,20 @@ in VS_OUT {
     vec4 fragPosLightSpace;
 } fs_in;
 
+struct Material {
+    sampler2D diffuse;
+    vec3 ambient;
+    vec3 specular;
+    float shininess;
+};
+
+
 out vec4 FragColor;
 
 uniform sampler2D modelTexture;
 uniform sampler2D shadowMap;      
 uniform vec3 lightPosWorld;
+uniform Material material;
 
 
 float ShadowFactor(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
@@ -31,7 +40,7 @@ float ShadowFactor(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
 
 void main()
 {
-    vec3 base = texture(modelTexture, fs_in.uv).rgb;
+    vec3 base = texture(material.diffuse, fs_in.uv).rgb;
 
     vec3 L = lightPosWorld - fs_in.worldPos;
     float shadow = ShadowFactor(fs_in.fragPosLightSpace, fs_in.normal, L);
