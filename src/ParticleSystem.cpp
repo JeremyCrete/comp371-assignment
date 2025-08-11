@@ -40,7 +40,7 @@ void ParticleSystem::render(glm::mat4 view, glm::mat4 projection) {
     glBindVertexArray(0);
 }
 
-void ParticleSystem::emitParticles(float dt, glm::vec3 cameraPos)
+void ParticleSystem::emitParticles(float dt, glm::vec3 emitterPos)
 {
     timeSinceLastEmission += dt; 
     int particlesToEmit = timeSinceLastEmission * emissionRate;
@@ -52,7 +52,7 @@ void ParticleSystem::emitParticles(float dt, glm::vec3 cameraPos)
         if (idx == -1) return;
 
         particles[idx].life = PARTICLE_LIFETIME;
-        particles[idx].position = EMITTER_POSITION;
+        particles[idx].position = emitterPos;
         particles[idx].velocity = glm::vec3(
             distribution(generator) * 0.5f,
             abs(distribution(generator)) * 2.0f,

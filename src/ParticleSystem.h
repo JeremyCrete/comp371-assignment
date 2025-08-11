@@ -1,7 +1,7 @@
 #pragma once
 #include <GL/glew.h>
-#include <glm.hpp>
-#include <gtc/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <vector>
 #include <random>
 #include <iostream>
@@ -38,7 +38,7 @@ public:
         particles.resize(MAX_PARTICLES);
     }
 
-    void emitParticles(float dt, glm::vec3 cameraPos);
+    void emitParticles(float dt, glm::vec3 emitterPos);
 
     void update(float dt);
 
