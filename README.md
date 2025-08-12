@@ -73,11 +73,14 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 - [X] Window Title acts as makeshift HUD
 
 ## Demo Assignment 1
-
-![Assignment 1 Demo](media/demo.gif)
+<p align="left">
+  <img src="media/demo.gif" width="800" alt="Assignment 1 Demo">
+</p>
 
 ## Demo Assignment 2
-![Assignment 2 Demo](media/demo2.gif)
+<p align="left">
+  <img src="media/demo2.gif" width="800" alt="Assignment 2 Demo">
+</p>
 
 ## Controls
 
