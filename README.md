@@ -10,9 +10,11 @@
 - [Features Overview](#features-overview)
 - [Assignment Requirements Checklist](#assignment-requirements-checklist)
   - [Libraries Used](#libraries-used)
-  - [Interactive Camera](#inetractive-camera)
+  - [Interactive Camera](#interactive-camera)
   - [Scene Content](#scene-content)
-  - [Advanced Features](#advanced-features-choose-1-for-this-assignment-and-implement-the-other-next-assignment)
+  - [Dynamic lighting](#dynamic-lighting)
+  - [Hierarchical Animation](#hierarchical-animation)
+  - [Additional Interactions / Creativity](#additional-interactions--creativity)
 - [Demo Assignment 1](#demo-assignment-1)
 - [Demo Assignment 2](#demo-assignment-2)
 - [Controls](#controls)
@@ -44,7 +46,7 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 - [X] stb_image.h
 - [X] Assimp (Model loading)
 
-### Inetractive Camera
+### Interactive Camera
 - [X] Mouse controlled rotation to change the viewing direction of the scene
 - [X] Keyboard controlled translation (WASD style)
 - [X] Movement is relative to the camera
