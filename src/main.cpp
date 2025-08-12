@@ -1136,6 +1136,15 @@ int main(int argc, char* argv[])
         GLuint colorLoc = glGetUniformLocation(modelShaderProgram, "modelColor");
         glUniform3fv(colorLoc, 1, &currentModelColor[0]);
 
+        // View position for Phong specular
+        glUniform3fv(glGetUniformLocation(modelShaderProgram, "viewPos"), 1, &cameraPosition[0]);
+
+        // Materials
+        glUniform3f(glGetUniformLocation(modelShaderProgram, "material.ambient"),  0.15f, 0.15f, 0.15f);
+        glUniform3f(glGetUniformLocation(modelShaderProgram, "material.specular"), 0.6f,  0.6f,  0.6f);
+        glUniform1f(glGetUniformLocation(modelShaderProgram, "material.shininess"), 100.0f);
+
+
         //finds center point of mesh so we can rotate it 
 
         for (const Mesh& mesh : cubeMeshes) {
