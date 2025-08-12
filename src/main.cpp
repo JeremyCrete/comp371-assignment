@@ -54,22 +54,62 @@ float dirLightSpeed = 20.0f; // degrees per second
 float dirLightRadius = 40.0f; // match initial Z value
 float dirLightHeight = 30.0f; // match initial Y value
 
+const int KONAMI_SEQUENCE[] = {
+    GLFW_KEY_UP, GLFW_KEY_UP,
+    GLFW_KEY_DOWN, GLFW_KEY_DOWN,
+    GLFW_KEY_LEFT, GLFW_KEY_RIGHT,
+    GLFW_KEY_LEFT, GLFW_KEY_RIGHT,
+    GLFW_KEY_B, GLFW_KEY_A
+};
+
+
+int  gKonamiIndex = 0;
+bool gKonamiCodeActive = false;
+int gsavedTextureMode =1;
 
 
 // f = autospin around model
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)  {
-        autoSpinMode = !autoSpinMode;
-        if (autoSpinMode) spinAngle = 0.0f;
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    //konami codde logic
+    if (action == GLFW_PRESS) {
+        int expected = KONAMI_SEQUENCE[gKonamiIndex];
+        if (key == expected) {
+            gKonamiIndex++;
+            const int N = sizeof(KONAMI_SEQUENCE)/sizeof(KONAMI_SEQUENCE[0]);
+            if (gKonamiIndex == N) {
+                gKonamiIndex = 0;
+                gKonamiCodeActive = !gKonamiCodeActive;
+                if (gKonamiCodeActive) {
+                    gsavedTextureMode = currentTextureMode;
+                    currentTextureMode = 3; // RGB on
+                    std::cout << "[Konami] RGB wrap ON\n";
+                } else {
+                    currentTextureMode = gsavedTextureMode;
+                    std::cout << "[Konami] RGB wrap OFF (restored)\n";
+                }
+            }
+        } else {
+            gKonamiIndex = (key == KONAMI_SEQUENCE[0]) ? 1 : 0;
+        }
+
+        // input keys
+        if (key == GLFW_KEY_F) {
+            autoSpinMode = !autoSpinMode;
+            if (autoSpinMode) spinAngle = 0.0f;
+        }
+        if (key == GLFW_KEY_ESCAPE) {
+            glfwSetWindowShouldClose(window, true);
+        }
+        if (key == GLFW_KEY_1) {
+            currentTextureMode = 1; // Onyx
+            if (gKonamiCodeActive) { gKonamiCodeActive = false; std::cout << "[Konami] OFF (Onyx)\n"; }
+        }
+        if (key == GLFW_KEY_2) {
+            currentTextureMode = 2; // Gold
+            if (gKonamiCodeActive) { gKonamiCodeActive = false; std::cout << "[Konami] OFF (Gold)\n"; }
+        }
     }
-
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-        currentTextureMode = 1; // Onyx
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-        currentTextureMode = 2; // Gold
 }
 
 
@@ -345,7 +385,6 @@ int compileAndLinkShaders(const char* vertexSource, const char* fragmentSource)
 {
     // compile and link shader program
     // return shader program id
-    // ------------------------------------
 
     // vertex shader
     int vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -793,6 +832,34 @@ int main(int argc, char* argv[])
     }
     stbi_image_free(goldData);
 
+
+    // white texture to add RGB
+    unsigned int whiteWrapTexture;
+    glGenTextures(1, &whiteWrapTexture);
+    glBindTexture(GL_TEXTURE_2D, whiteWrapTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int wrapW, wrapH, wrapC;
+    #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    unsigned char* wrapData = stbi_load("src\\Models\\rainbowBake.png", &wrapW, &wrapH, &wrapC, 0);
+    #else
+    unsigned char* wrapData = stbi_load("models/rainbowBake.png", &wrapW, &wrapH, &wrapC, 0);
+    #endif
+    if (wrapData) {
+        GLenum fmt = (wrapC == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, fmt, wrapW, wrapH, 0, fmt, GL_UNSIGNED_BYTE, wrapData);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        std::cerr << "Failed to load rainbowBake.png\n";
+    }
+    stbi_image_free(wrapData);
+
+
+
+
     // loads the wheels
     unsigned int tireTexture;
     glGenTextures(1, &tireTexture);
@@ -1046,6 +1113,10 @@ int main(int argc, char* argv[])
         // draw models loaded using assimp
         glUseProgram(modelShaderProgram);
 
+        glUniform1i(glGetUniformLocation(modelShaderProgram, "textureMode"), currentTextureMode);
+        glUniform1f(glGetUniformLocation(modelShaderProgram, "uTime"), (float)glfwGetTime());
+
+
         // Set matrices for model shader
         GLuint modelViewLoc = glGetUniformLocation(modelShaderProgram, "viewMatrix");
         GLuint modelProjLoc = glGetUniformLocation(modelShaderProgram, "projectionMatrix");
@@ -1102,10 +1173,12 @@ int main(int argc, char* argv[])
                 glBindTexture(GL_TEXTURE_2D, bumperBorderTexture);
             }
             else if (currentTextureMode == 1) {
-                glBindTexture(GL_TEXTURE_2D, cyberTexture);
+                glBindTexture(GL_TEXTURE_2D, cyberTexture); //onyx texture
             }
-            else {
+            else if (currentTextureMode == 2) {            // Gold
                 glBindTexture(GL_TEXTURE_2D, goldTexture);
+            } else if (currentTextureMode == 3) {            // White mask
+                glBindTexture(GL_TEXTURE_2D, whiteWrapTexture);
             }
 			// Set material properties here
             glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
@@ -1207,8 +1280,8 @@ int main(int argc, char* argv[])
         if (angle > 360.0f)
             angle -= 360.0f;
 
-        // Light cube
-        // --- Light cube (shows point light position) ---
+
+        // Light cube (shows point light position)
         for (unsigned int i = 0; i < 1; i++)
         {
             glUseProgram(lightCubeProgram);
@@ -1242,8 +1315,10 @@ int main(int argc, char* argv[])
 
         {
 
-            std::string title = std::string("Wrap: ") + (currentTextureMode == 1 ? "Onyx" : "Gold") + " | Mode: " + (autoSpinMode ? "Orbit" : "Manual") + " | F=Orbit 1/2=Wrap  Shift=Fast  Esc=Quit";
-            glfwSetWindowTitle(window, title.c_str());
+           std::string wrapName = (gKonamiCodeActive || currentTextureMode == 3) ? "RGB" : (currentTextureMode == 1 ? "Onyx" : "Gold");
+           std::string title = "Wrap: " + wrapName + " | Mode: " + (autoSpinMode ? "Orbit" : "Manual") + " | F=Orbit 1/2=Wrap  Shift=Fast  Esc=Quit";
+           glfwSetWindowTitle(window, title.c_str());
+
         }
 
         glfwSwapBuffers(window);
