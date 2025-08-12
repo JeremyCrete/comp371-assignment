@@ -24,7 +24,9 @@
 ![GLFW](https://img.shields.io/badge/GLFW-enabled-brightgreen)
 ![GLEW](https://img.shields.io/badge/GLEW-included-blueviolet)
 ![GLM](https://img.shields.io/badge/GLM-vector%20math-orange)
+![Assimp](https://img.shields.io/badge/Assimp-model%20loading-informational)
 ![Platform](https://img.shields.io/badge/Platform-macOS-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)
 ![Build](https://img.shields.io/badge/Build-manual%20or%20CMake-yellow)
 ![License](https://img.shields.io/badge/License-Academic-green)
 
@@ -76,15 +78,17 @@ This project implements a 3D scene using OpenGL. It features interactive camera 
 
 ## Controls
 
-| Actions         | Key / Input         |
-|-----------------|---------------------|
-| Move Forward        | `W`                |
-| Move Backward       | `S`                |
-| Move Left           | `A`                |
-| Move Right          | `D`                |
-| Increase Movement Speed          | `SHIFT`                |
-| Look Around         | Mouse movement     |
-| Exit Program        | `ESC`              |
+| Action  | Key / Input |
+|---------|------------------|
+| Move Forward / Back / Left / Right  | `W / S / A / D`|
+| Sprint | `Shift`|
+| Look Around | Mouse|
+| Toggle Orbit Camera | `F`|
+| Toggle Second Shadow (Light #2)  | `L`|
+| Burnout (smoke + fast spin) | `B`|
+| Wrap: Onyx / Gold  | `1` / `2`|
+| Secret: Toggle RGB Wrap | Konami Code: ↑ ↑ ↓ ↓ ← → ← → `B` `A`|
+| Exit Program  |`Esc`|
 
 ## Credits
 - [Cloud Texture / Skybox](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)
