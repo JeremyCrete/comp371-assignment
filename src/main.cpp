@@ -56,6 +56,8 @@ float dirLightSpeed = 20.0f; // degrees per second
 float dirLightRadius = 40.0f; // match initial Z value
 float dirLightHeight = 30.0f; // match initial Y value
 
+bool gSecondShadowOn = false;
+
 const int KONAMI_SEQUENCE[] = {
     GLFW_KEY_UP, GLFW_KEY_UP,
     GLFW_KEY_DOWN, GLFW_KEY_DOWN,
@@ -99,6 +101,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         if (key == GLFW_KEY_F) {
             autoSpinMode = !autoSpinMode;
             if (autoSpinMode) spinAngle = 0.0f;
+        }
+        if (key == GLFW_KEY_L) {
+            gSecondShadowOn = !gSecondShadowOn;
+            std::cout << (gSecondShadowOn ? "[Second Shadow] ON\n" : "[Second Shadow] OFF\n");
         }
         if (key == GLFW_KEY_ESCAPE) {
             glfwSetWindowShouldClose(window, true);
@@ -635,6 +641,28 @@ int main(int argc, char* argv[])
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    //shadow map 2
+    GLuint depthMapFBO_B = 0, depthMapTex_B = 0;
+    glGenFramebuffers(1, &depthMapFBO_B);
+    glGenTextures(1, &depthMapTex_B);
+    glBindTexture(GL_TEXTURE_2D, depthMapTex_B);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0,
+                GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    {
+        float borderCol[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderCol);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_B);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTex_B, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -860,8 +888,6 @@ int main(int argc, char* argv[])
     stbi_image_free(wrapData);
 
 
-
-
     // loads the wheels
     unsigned int tireTexture;
     glGenTextures(1, &tireTexture);
@@ -1007,11 +1033,17 @@ int main(int argc, char* argv[])
         rad = glm::radians(dirLightAngle);
         dirLightPos[1].x = dirLightRadius * cos(rad);
 
-        //Directional light
-        glm::vec3 lightPos = dirLightPos[0];
-        glm::mat4 lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
-        glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+
+        // directional lights and light space for both the lights in the scene
+        glm::vec3 lightPos0 = dirLightPos[0];
+        glm::mat4 lightProj0 = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
+        glm::mat4 lightView0 = glm::lookAt(lightPos0, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+        glm::mat4 lightSpaceMatrix0 = lightProj0 * lightView0;
+
+        glm::vec3 lightPos1 = dirLightPos[1];
+        glm::mat4 lightProj1 = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
+        glm::mat4 lightView1 = glm::lookAt(lightPos1, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+        glm::mat4 lightSpaceMatrix1 = lightProj1 * lightView1;
 
         glm::mat4 floorWorld = glm::mat4(1.0f);
         floorWorld = glm::translate(floorWorld, glm::vec3(0.0f, -1.0f, 0.0f));
@@ -1030,7 +1062,7 @@ int main(int argc, char* argv[])
         glCullFace(GL_FRONT);
 
         glUseProgram(depthShader);
-        glUniformMatrix4fv(glGetUniformLocation(depthShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(depthShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix0[0][0]);
 
         // floor
         glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
@@ -1064,6 +1096,47 @@ int main(int argc, char* argv[])
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, WIDTH, HEIGHT);
 
+        //shadow pass 2 used for light 1
+        if (gSecondShadowOn) {
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO_B);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glCullFace(GL_FRONT);
+
+            glUseProgram(depthShader);
+            glUniformMatrix4fv(glGetUniformLocation(depthShader, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix1[0][0]);
+
+            // floor
+            glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
+            glBindVertexArray(groundVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
+
+            // car & wheels
+            for (const Mesh& mesh : cubeMeshes) {
+                glm::mat4 worldForThisMesh = carWorld;
+                bool isWheel =
+                    (mesh.name.find("Tire") != std::string::npos) ||
+                    (mesh.name.find("Rims") != std::string::npos) ||
+                    (mesh.name.find("Protector") != std::string::npos);
+                if (isWheel) {
+                    glm::vec3 pivot = meshCenter(mesh);
+                    glm::mat4 wheelLocal(1.0f);
+                    wheelLocal = glm::translate(wheelLocal, pivot);
+                    wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1, 0, 0));
+                    wheelLocal = glm::translate(wheelLocal, -pivot);
+                    worldForThisMesh = carWorld * wheelLocal;
+                }
+                glUniformMatrix4fv(glGetUniformLocation(depthShader, "worldMatrix"), 1, GL_FALSE, &worldForThisMesh[0][0]);
+                mesh.Draw();
+            }
+
+            glCullFace(GL_BACK);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, WIDTH, HEIGHT);
+        }
+
+
 
         //////// Skybox
         // Draw Skybox
@@ -1087,21 +1160,39 @@ int main(int argc, char* argv[])
         
         // draw fllor with shadow
         glUseProgram(floorShadowProgram);
+
+        // matrices
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
-        glUniform3f(glGetUniformLocation(floorShadowProgram, "pointLights[0].position"), dirLightPos[1].x, dirLightPos[1].y, dirLightPos[1].z);
+        //light-space matrices
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix0"), 1, GL_FALSE, &lightSpaceMatrix0[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix1"), 1, GL_FALSE, &lightSpaceMatrix1[0][0]);
 
+        //light positions
+        glUniform3fv(glGetUniformLocation(floorShadowProgram, "pointLights[0].position"), 1, &lightPos0[0]);
+        glUniform3fv(glGetUniformLocation(floorShadowProgram, "pointLights[1].position"), 1, &lightPos1[0]);
+
+        // base floor texture (stone)
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture); // stone.jpg
+        glBindTexture(GL_TEXTURE_2D, texture);
         glUniform1i(glGetUniformLocation(floorShadowProgram, "diffuseTexture"), 0);
 
+        // shadow map for light 0
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMapTex);
-        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap0"), 1);
 
+        // shadow map for light 1
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, depthMapTex_B);
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap1"), 2);
+
+        //open and close light 1
+        glUniform1i(glGetUniformLocation(floorShadowProgram, "uUseShadow1"), gSecondShadowOn ? 1 : 0);
+
+        // draw
         glBindVertexArray(groundVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
@@ -1120,12 +1211,27 @@ int main(int argc, char* argv[])
         GLuint modelWorldLoc = glGetUniformLocation(modelShaderProgram, "worldMatrix");
 
         // pass light/shadow to model shader (same lightPos & lightSpaceMatrix you used for the floor)
-        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
-        glUniform3fv(glGetUniformLocation(modelShaderProgram, "lightPosWorld"), 1, &lightPos[0]);
+        // Tell the shader if the second shadow is on
+        glUniform1i(glGetUniformLocation(modelShaderProgram, "uUseShadow1"), gSecondShadowOn ? 1 : 0);
 
+        // Light-space matrices (for recomputing fragPos in frag shader)
+        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "lightSpaceMatrix0"), 1, GL_FALSE, &lightSpaceMatrix0[0][0]);
+        glUniformMatrix4fv(glGetUniformLocation(modelShaderProgram, "lightSpaceMatrix1"), 1, GL_FALSE, &lightSpaceMatrix1[0][0]);
+
+        // Light positions
+        glUniform3fv(glGetUniformLocation(modelShaderProgram, "lightPosWorld0"), 1, &lightPos0[0]);
+        glUniform3fv(glGetUniformLocation(modelShaderProgram, "lightPosWorld1"), 1, &lightPos1[0]);
+
+        // Bind maps for shadow
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, depthMapTex);
-        glUniform1i(glGetUniformLocation(modelShaderProgram, "shadowMap"), 1);
+        glUniform1i(glGetUniformLocation(modelShaderProgram, "shadowMap0"), 1);
+
+        if (gSecondShadowOn) {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, depthMapTex_B);
+            glUniform1i(glGetUniformLocation(modelShaderProgram, "shadowMap1"), 2);
+        }
 
 
         glUniformMatrix4fv(modelViewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
@@ -1183,7 +1289,7 @@ int main(int argc, char* argv[])
             }
             else if (currentTextureMode == 2) {            // Gold
                 glBindTexture(GL_TEXTURE_2D, goldTexture);
-            } else if (currentTextureMode == 3) {            // White mask
+            } else if (currentTextureMode == 3) {            // White mask needed for the RGB feature
                 glBindTexture(GL_TEXTURE_2D, whiteWrapTexture);
             }
             // Set material properties here
@@ -1280,7 +1386,6 @@ int main(int argc, char* argv[])
             angle -= 360.0f;
 
         // Light cube
-        // --- Light cube (shows point light position) ---
         for (unsigned int i = 0; i < 2; i++)
         {
             glUseProgram(lightCubeProgram);
