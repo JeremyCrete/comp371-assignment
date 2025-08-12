@@ -47,7 +47,9 @@ float carSpinSpeed = 20.0f; //car
 float wheelSpinAngle = 0.0f;
 float wheelSpinSpeed = 240.0f; //wheels
 
-glm::vec3 dirLightPos(0.0f, 30.0f, -40.0f);
+std::vector<glm::vec3> dirLightPos = { glm::vec3(0.0f, 30.0f, -40.0f), glm::vec3(0.0f, 10.0f, 40.0f) };
+
+
 
 float dirLightAngle = 0.0f;
 float dirLightSpeed = 20.0f; // degrees per second
@@ -58,7 +60,7 @@ float dirLightHeight = 30.0f; // match initial Y value
 
 // f = autospin around model
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)  {
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         autoSpinMode = !autoSpinMode;
         if (autoSpinMode) spinAngle = 0.0f;
     }
@@ -245,10 +247,10 @@ const char* vertexShader2Source = vertexShader2Str.c_str();
 std::string fragment2ShaderStr = loadShaderSource("Shaders/shader2.frag");
 const char* fragment2ShaderSource = fragment2ShaderStr.c_str();
 
-std::string vertexParticleShaderStr   = loadShaderSource("Shaders/particle.vert");
-const char*  vertexParticleShaderSource = vertexParticleShaderStr.c_str();
+std::string vertexParticleShaderStr = loadShaderSource("Shaders/particle.vert");
+const char* vertexParticleShaderSource = vertexParticleShaderStr.c_str();
 std::string fragmentParticleShaderStr = loadShaderSource("Shaders/particle.frag");
-const char*  fragmentParticleShaderSource = fragmentParticleShaderStr.c_str();
+const char* fragmentParticleShaderSource = fragmentParticleShaderStr.c_str();
 #endif
 
 struct TexturedColoredVertex
@@ -598,7 +600,7 @@ int main(int argc, char* argv[])
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     std::string modelVertSrc = loadShaderSource("src\\Shaders\\model.vert");
-	std::string modelFragSrc = loadShaderSource("src\\Shaders\\model.frag");    
+    std::string modelFragSrc = loadShaderSource("src\\Shaders\\model.frag");
 #else
     std::string modelVertSrc = loadShaderSource("Shaders/model.vert");
     std::string modelFragSrc = loadShaderSource("Shaders/model.frag");
@@ -615,7 +617,7 @@ int main(int argc, char* argv[])
     int floorShadowProgram = compileAndLinkShaders(
         loadShaderSource("src\\Shaders\\floor_shadow.vert").c_str(),
         loadShaderSource("src\\Shaders\\floor_shadow.frag").c_str()
-	);
+    );
 #else
     int depthShader = compileAndLinkShaders(
         loadShaderSource("Shaders/shadow_depth.vert").c_str(),
@@ -629,7 +631,7 @@ int main(int argc, char* argv[])
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	std::vector<Mesh> cubeMeshes = loadModel("src\\Models\\cyberCar.obj");
+    std::vector<Mesh> cubeMeshes = loadModel("src\\Models\\cyberCar.obj");
 #else
     std::vector<Mesh> cubeMeshes = loadModel("Models/cyberCar.obj");
 #endif
@@ -645,7 +647,7 @@ int main(int argc, char* argv[])
     unsigned int skyboxVAO = createSkyboxVAO();
 
 
-	//Init particle systems
+    //Init particle systems
 
     std::vector<ParticleSystem*> particleSystems;
     for (int i = 0; i < 2; ++i) {
@@ -748,7 +750,7 @@ int main(int argc, char* argv[])
 
     int cyberWidth, cyberHeight, cyberChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	unsigned char* cyberData = stbi_load("src\\Models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
+    unsigned char* cyberData = stbi_load("src\\Models\\cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
 #else
     unsigned char* cyberData = stbi_load("models/cyberBake.png", &cyberWidth, &cyberHeight, &cyberChannels, 0);
 #endif
@@ -776,7 +778,7 @@ int main(int argc, char* argv[])
 
     int goldWidth, goldHeight, goldChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	unsigned char* goldData = stbi_load("src\\Models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
+    unsigned char* goldData = stbi_load("src\\Models\\cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
 #else
     unsigned char* goldData = stbi_load("models/cyberrGold.png", &goldWidth, &goldHeight, &goldChannels, 0);
 #endif
@@ -804,7 +806,7 @@ int main(int argc, char* argv[])
 
     int tireWidth, tireHeight, tireChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	unsigned char* tireData = stbi_load("src\\Models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
+    unsigned char* tireData = stbi_load("src\\Models\\wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
 #else
     unsigned char* tireData = stbi_load("models/wheelsBake.png", &tireWidth, &tireHeight, &tireChannels, 0);
 #endif
@@ -833,7 +835,7 @@ int main(int argc, char* argv[])
 
     int bbWidth, bbHeight, bbChannels;
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	unsigned char* bbData = stbi_load("src\\Models\\bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
+    unsigned char* bbData = stbi_load("src\\Models\\bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
 #else
     unsigned char* bbData = stbi_load("models/bumperborderBake.png", &bbWidth, &bbHeight, &bbChannels, 0);
 #endif
@@ -863,11 +865,11 @@ int main(int argc, char* argv[])
         const bool burnout = (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS);
 
 
-        const float CAR_SPIN_SPEED_BURNOUT   = 80.0f;   //spin speed of car when holding B
-        const float WHEEL_SPIN_SPEED_BURNOUT = 900.0f;  
+        const float CAR_SPIN_SPEED_BURNOUT = 80.0f;   //spin speed of car when holding B
+        const float WHEEL_SPIN_SPEED_BURNOUT = 900.0f;
 
         if (burnout) {
-            carSpinAngle   += CAR_SPIN_SPEED_BURNOUT   * dt;
+            carSpinAngle += CAR_SPIN_SPEED_BURNOUT * dt;
             wheelSpinAngle += WHEEL_SPIN_SPEED_BURNOUT * dt;
         }
 
@@ -882,7 +884,7 @@ int main(int argc, char* argv[])
             double dy = mousePosY - lastMousePosY;
             lastMousePosX = mousePosX;
             lastMousePosY = mousePosY;
-            
+
             const float cameraAngularSpeed = 8.0f;
             cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
             cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
@@ -928,12 +930,18 @@ int main(int argc, char* argv[])
         dirLightAngle += dirLightSpeed * dt;
         if (dirLightAngle > 360.0f) dirLightAngle -= 360.0f;
         float rad = glm::radians(dirLightAngle);
-        dirLightPos.x = dirLightRadius * cos(rad);
-        dirLightPos.y = dirLightHeight;
-        dirLightPos.z = dirLightRadius * sin(rad);
+        dirLightPos[0].x = dirLightRadius * cos(rad);
+        dirLightPos[0].y = dirLightHeight;
+        dirLightPos[0].z = dirLightRadius * sin(rad);
+
+        // Animate directional light position in a circle
+        dirLightAngle += dirLightSpeed * dt;
+        if (dirLightAngle > 360.0f) dirLightAngle -= 360.0f;
+        rad = glm::radians(dirLightAngle);
+        dirLightPos[1].x = dirLightRadius * cos(rad);
 
         //Directional light
-        glm::vec3 lightPos = dirLightPos;
+        glm::vec3 lightPos = dirLightPos[0];
         glm::mat4 lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, 1.0f, 80.0f);
         glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0, 1, 0));
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
@@ -1009,6 +1017,7 @@ int main(int argc, char* argv[])
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); // Reset depth function
 
+        
         // draw fllor with shadow
         glUseProgram(floorShadowProgram);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
@@ -1016,19 +1025,7 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
         glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture); // stone.jpg
-        glUniform1i(glGetUniformLocation(floorShadowProgram, "diffuseTexture"), 0);
-
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, depthMapTex);
-        glUniform1i(glGetUniformLocation(floorShadowProgram, "shadowMap"), 1);
-        // draw fllor with shadow
-        glUseProgram(floorShadowProgram);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "viewMatrix"), 1, GL_FALSE, &viewMatrix[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "projectionMatrix"), 1, GL_FALSE, &projectionMatrix[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "worldMatrix"), 1, GL_FALSE, &floorWorld[0][0]);
-        glUniformMatrix4fv(glGetUniformLocation(floorShadowProgram, "lightSpaceMatrix"), 1, GL_FALSE, &lightSpaceMatrix[0][0]);
+        glUniform3f(glGetUniformLocation(floorShadowProgram, "pointLights[0].position"), dirLightPos[1].x, dirLightPos[1].y, dirLightPos[1].z);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture); // stone.jpg
@@ -1090,7 +1087,7 @@ int main(int argc, char* argv[])
             else {
                 glBindTexture(GL_TEXTURE_2D, goldTexture);
             }
-			// Set material properties here
+            // Set material properties here
             glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
             if (mesh.name.find("Tire") != std::string::npos ||
                 mesh.name.find("Protector") != std::string::npos ||
@@ -1107,7 +1104,7 @@ int main(int argc, char* argv[])
             else {
                 glBindTexture(GL_TEXTURE_2D, goldTexture);
             }
-			// Set material properties here
+            // Set material properties here
             glUniform1i(glGetUniformLocation(modelShaderProgram, "material.diffuse"), 0);
 
 
@@ -1118,23 +1115,23 @@ int main(int argc, char* argv[])
 
             if (isWheel) {
                 glm::vec3 pivot = meshCenter(mesh);                              // model space
-                glm::vec3 pivotWorld = glm::vec3(carWorld * glm::vec4(pivot,1)); // world space
+                glm::vec3 pivotWorld = glm::vec3(carWorld * glm::vec4(pivot, 1)); // world space
 
                 glm::mat4 wheelLocal(1.0f);
                 wheelLocal = glm::translate(wheelLocal, pivot);
-                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1,0,0));
+                wheelLocal = glm::rotate(wheelLocal, glm::radians(wheelSpinAngle), glm::vec3(1, 0, 0));
                 wheelLocal = glm::translate(wheelLocal, -pivot);
                 worldForThisMesh = carWorld * wheelLocal;
             }
 
-                glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
-                mesh.Draw();
-            }
+            glUniformMatrix4fv(modelWorldLoc, 1, GL_FALSE, &worldForThisMesh[0][0]);
+            mesh.Draw();
+        }
 
         //back wheels for smoke during burnout
-        auto isWheelMesh = [&](const std::string& n){
+        auto isWheelMesh = [&](const std::string& n) {
             return n.find("Rims.001") != std::string::npos || n.find("Protector.001") != std::string::npos;
-        };
+            };
 
 
         auto worldForMesh = [&](const Mesh& m) -> glm::mat4 {
@@ -1143,28 +1140,28 @@ int main(int argc, char* argv[])
                 glm::vec3 pivot = meshCenter(m);
                 glm::mat4 local(1.0f);
                 local = glm::translate(local, pivot);
-                local = glm::rotate(local, glm::radians(wheelSpinAngle), glm::vec3(1,0,0));
+                local = glm::rotate(local, glm::radians(wheelSpinAngle), glm::vec3(1, 0, 0));
                 local = glm::translate(local, -pivot);
                 M = carWorld * local;
             }
             return M;
-        };
+            };
 
         auto lowestPointWorld = [&](const Mesh& m) -> glm::vec3 {
             glm::mat4 W = worldForMesh(m);
             float yMin = FLT_MAX; glm::vec3 best(0.0f);
             for (const Vertex& v : m.vertices) {
-                glm::vec3 pW = glm::vec3(W * glm::vec4(v.Position,1));
+                glm::vec3 pW = glm::vec3(W * glm::vec4(v.Position, 1));
                 if (pW.y < yMin) { yMin = pW.y; best = pW; }
             }
             return best;
-        };
+            };
 
-        glm::vec3 carCenter = glm::vec3(carWorld * glm::vec4(0,0,0,1));
-        glm::vec3 rightDir  = glm::normalize(glm::mat3(carWorld) * glm::vec3(1,0,0));
-        glm::vec3 fwd       = glm::normalize(glm::mat3(carWorld) * glm::vec3(0,0,1)); 
+        glm::vec3 carCenter = glm::vec3(carWorld * glm::vec4(0, 0, 0, 1));
+        glm::vec3 rightDir = glm::normalize(glm::mat3(carWorld) * glm::vec3(1, 0, 0));
+        glm::vec3 fwd = glm::normalize(glm::mat3(carWorld) * glm::vec3(0, 0, 1));
 
-        struct SidePick { bool has=false; glm::vec3 rear; float tRear=FLT_MAX; };
+        struct SidePick { bool has = false; glm::vec3 rear; float tRear = FLT_MAX; };
         SidePick leftPick, rightPick;
 
         // Scan for wheel Mesh using the mesh names of the obj model
@@ -1172,15 +1169,15 @@ int main(int argc, char* argv[])
             if (!isWheelMesh(m.name)) continue;
 
 
-            glm::vec3 pivotW = glm::vec3(worldForMesh(m) * glm::vec4(meshCenter(m),1));
+            glm::vec3 pivotW = glm::vec3(worldForMesh(m) * glm::vec4(meshCenter(m), 1));
             glm::vec3 rel = pivotW - carCenter;
 
             auto& S = (glm::dot(rel, rightDir) >= 0.f) ? rightPick : leftPick;
-            float t = glm::dot(rel, fwd);           
+            float t = glm::dot(rel, fwd);
             if (t < S.tRear) {
                 S.tRear = t;
-                S.rear  = lowestPointWorld(m);      //contact point for the particles emissions
-                S.has   = true;
+                S.rear = lowestPointWorld(m);      //contact point for the particles emissions
+                S.has = true;
             }
         }
 
@@ -1196,20 +1193,13 @@ int main(int argc, char* argv[])
             particleSystems[i]->render(viewMatrix, projectionMatrix);
         }
 
-
-        // Rebind stone texture for floor
-        glUseProgram(shaderProgram); // Use floor shader again
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture); // Rebind stone.jpg
-        glUniform1i(glGetUniformLocation(shaderProgram, "diffuseTexture"), 0);
-
         angle += rotationSpeed * dt; // increment angle each frame
         if (angle > 360.0f)
             angle -= 360.0f;
 
         // Light cube
         // --- Light cube (shows point light position) ---
-        for (unsigned int i = 0; i < 1; i++)
+        for (unsigned int i = 0; i < 2; i++)
         {
             glUseProgram(lightCubeProgram);
 
@@ -1227,7 +1217,7 @@ int main(int argc, char* argv[])
 
             // Build transform for the light cube
             glm::mat4 worldMatrix = glm::mat4(1.0f);
-            worldMatrix = glm::translate(worldMatrix, dirLightPos);
+            worldMatrix = glm::translate(worldMatrix, dirLightPos[i]);
             worldMatrix = glm::scale(worldMatrix, glm::vec3(0.5f)); // make it smaller
 
             // Send world matrix
