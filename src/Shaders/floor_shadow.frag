@@ -37,7 +37,7 @@ vec3 CalcPointLight(Light light, vec3 normal, vec3 fragPos, vec4 textureColor)
     // combine results
     vec3 result = textureColor.rgb + diffuse;
     return result;
-};
+}
 
 float ShadowFactor(vec4 fragPosLightSpace) {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
